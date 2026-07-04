@@ -8,6 +8,7 @@ import { toFsrsCard, fromFsrsCard, fromFsrsLog } from '../fsrs/mappers';
 import { useDueCards } from '../hooks/useDueCards';
 import type { CardDoc } from '../types';
 import { RatingButtons } from './RatingButtons';
+import { btnPrimary, btnSecondary } from './ui';
 
 function formatInterval(ms: number): string {
   if (ms < 60_000) return `${Math.max(1, Math.round(ms / 1000))}s`;
@@ -24,12 +25,17 @@ function formatInterval(ms: number): string {
 
 const STATE_LABELS = ['New', 'Learning', 'Review', 'Relearning'];
 
+const STATE_STYLES: Record<number, string> = {
+  0: 'border-zinc-300 text-zinc-500 dark:border-zinc-600 dark:text-zinc-400',
+  1: 'border-amber-400/60 text-amber-500',
+  2: 'border-emerald-400/60 text-emerald-500',
+  3: 'border-red-400/60 text-red-500'
+};
+
 export function StudySession() {
   const { deckId } = useParams();
   const due = useDueCards(deckId);
 
-  // Track moved-off card ids so reactive updates don't snap the next card
-  // from underneath us mid-rating.
   const [seenIds, setSeenIds] = useState<string[]>([]);
   const [showBack, setShowBack] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -46,18 +52,25 @@ export function StudySession() {
     const card = toFsrsCard(current);
     const now = new Date();
     const out: Record<number, string> = {};
-    for (const r of [Rating.Again, Rating.Hard, Rating.Good, Rating.Easy] as Grade[]) {
+    for (const r of [
+      Rating.Again,
+      Rating.Hard,
+      Rating.Good,
+      Rating.Easy
+    ] as Grade[]) {
       try {
         const res = scheduler.next(card, now, r);
-        out[r] = formatInterval(
-          res.card.due.getTime() - now.getTime()
-        );
+        out[r] = formatInterval(res.card.due.getTime() - now.getTime());
       } catch {
         out[r] = '';
       }
     }
     return out;
   }, [current]);
+
+  const total = due.length || 1;
+  const remaining = queue.length;
+  const progress = Math.round(((total - remaining) / total) * 100);
 
   async function rate(rating: Grade) {
     if (!current || busy) return;
@@ -103,16 +116,33 @@ export function StudySession() {
 
   if (!current) {
     return (
-      <div className="study study-done">
-        <div className="study-inner">
-          <h2>All done!</h2>
-          <p>No more due cards in this deck.</p>
+      <div className="space-y-8">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-8 py-12 text-center dark:border-emerald-500/20 dark:bg-emerald-500/10">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-6 w-6"
+              aria-hidden="true"
+            >
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-bold">All done!</h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+            No more due cards in this deck.
+          </p>
         </div>
-        <div className="study-nav">
-          <Link to={`/deck/${deckId}`} className="btn">
+        <div className="flex justify-center gap-2">
+          <Link to={`/deck/${deckId}`} className={btnSecondary}>
             Back to deck
           </Link>
-          <Link to="/" className="btn">
+          <Link to="/" className={btnSecondary}>
             Decks
           </Link>
         </div>
@@ -121,30 +151,46 @@ export function StudySession() {
   }
 
   return (
-    <div className="study">
-      <div className="study-progress">
-        <span>
-          {queue.length} card{queue.length === 1 ? '' : 's'} remaining
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm text-zinc-500 dark:text-zinc-400">
+          {remaining} card{remaining === 1 ? '' : 's'} remaining
         </span>
-        <Link to={`/deck/${deckId}`} className="btn btn-link">
+        <Link
+          to={`/deck/${deckId}`}
+          className="text-sm text-zinc-500 transition hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400"
+        >
           Exit
         </Link>
       </div>
 
-      <div className="study-card">
-        <div className="study-state">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+        <div
+          className="h-full rounded-full bg-indigo-600 transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="flex min-h-[280px] flex-col gap-5 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <span
+          className={`self-start rounded-full border px-2.5 py-0.5 text-[0.7rem] font-medium uppercase tracking-wider ${STATE_STYLES[current.state] ?? STATE_STYLES[0]}`}
+        >
           {STATE_LABELS[current.state] ?? current.state}
+        </span>
+        <div className="text-xl font-semibold leading-relaxed whitespace-pre-wrap">
+          {current.front}
         </div>
-        <div className="study-front">{current.front}</div>
         {showBack ? (
           <>
-            <hr className="divider" />
-            <div className="study-back">{current.back}</div>
+            <hr className="border-zinc-200 dark:border-zinc-800" />
+            <div className="text-lg leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+              {current.back}
+            </div>
           </>
         ) : null}
       </div>
 
-      <div className="study-controls">
+      <div className="flex justify-center">
         {showBack ? (
           <RatingButtons
             previews={previews}
@@ -154,7 +200,7 @@ export function StudySession() {
         ) : (
           <button
             type="button"
-            className="btn btn-primary btn-reveal"
+            className={`${btnPrimary} px-6 py-3`}
             onClick={() => setShowBack(true)}
             disabled={busy}
           >
