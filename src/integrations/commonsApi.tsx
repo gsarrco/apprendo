@@ -1,6 +1,6 @@
 const API_URL = 'https://commons.wikimedia.org/w/api.php';
 
-export interface WikiImage {
+export interface CommonsImage {
   title: string;
   url: string;
   artist: string | null;
@@ -29,7 +29,7 @@ interface QueryResponse {
 
 const IMAGE_MIME = /^image\//;
 
-export async function fetchImages(query: string, limit = 3): Promise<WikiImage[]> {
+export async function searchCommonsImages(query: string, limit = 3): Promise<CommonsImage[]> {
   const params = new URLSearchParams({
     action: 'query',
     generator: 'search',
@@ -47,7 +47,7 @@ export async function fetchImages(query: string, limit = 3): Promise<WikiImage[]
   const pages = data.query?.pages;
   if (!pages) return [];
   return Object.values(pages)
-    .map((p): WikiImage | null => {
+    .map((p): CommonsImage | null => {
       const info = p.imageinfo?.[0];
       const url = info?.url;
       const mime = info?.mime;
@@ -61,6 +61,6 @@ export async function fetchImages(query: string, limit = 3): Promise<WikiImage[]
         credit: meta?.Credit?.value ?? null
       };
     })
-    .filter((img): img is WikiImage => img !== null)
+    .filter((img): img is CommonsImage => img !== null)
     .slice(0, limit);
 }

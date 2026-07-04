@@ -5,7 +5,7 @@ import { getDb } from '../db';
 import { createEmptyCard } from '../fsrs/scheduler';
 import { fromFsrsCard } from '../fsrs/mappers';
 import type { CardDoc } from '../types';
-import { fetchImages, type WikiImage } from '../wiki';
+import { searchCommonsImages, type CommonsImage } from '../integrations/commonsApi';
 import { useCards } from '../hooks/useCards';
 import { useDeck } from '../hooks/useDecks';
 import { btnPrimary, inputClass } from './ui';
@@ -33,7 +33,7 @@ function stripHtml(s: string): string {
     .body.textContent?.trim() ?? '';
 }
 
-function toThumb(img: WikiImage): Thumb {
+function toThumb(img: CommonsImage): Thumb {
   const artist = img.artist ? stripHtml(img.artist) : '';
   const license = img.license ? stripHtml(img.license) : '';
   const credit = img.credit ? stripHtml(img.credit) : '';
@@ -61,7 +61,7 @@ export function CardForm({ deckId }: { deckId: string }) {
     setThumbs([]);
     setSelected(null);
     try {
-      const images = await fetchImages(q, 3);
+      const images = await searchCommonsImages(q, 3);
       setThumbs(images.map(toThumb));
     } catch (err) {
       setThumbs([]);
