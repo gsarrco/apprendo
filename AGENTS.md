@@ -11,9 +11,7 @@ Data layer: RxDB + RxJS; spaced repetition via `ts-fsrs`.
 Always run the following before considering work done. Fix any errors.
 
 ```bash
-npm run lint        # oxlint (config in .oxlintrc.json)
-npx tsc -b          # TypeScript typecheck (config in tsconfig.json / tsconfig.app.json)
-npm run build       # tsc -b && vite build (production build)
+npm run lint && npx tsc -b && npm run build
 ```
 
 If wiring up the dev server to sanity-check, start and stop it
@@ -31,6 +29,26 @@ If wiring up the dev server to sanity-check, start and stop it
 - Color palette: indigo accent + zinc neutrals. State colors:
   amber (learning), emerald (review/ok), red (relearning/again).
 - Do not add comments unless explicitly requested.
+
+## Icons
+
+- Icons come from **`lucide-react`**. Use PascalCase **named imports**
+  (e.g. `import { Check, Sun, Moon } from 'lucide-react'`). Do not use
+  default imports.
+- Pass styling via standard SVG props: `className` (Tailwind sizing
+  like `h-5 w-5`), `strokeWidth` (number), `color`/`fill`. Use
+  `aria-hidden="true"` for decorative icons.
+- When you need an icon for a new concept, search the catalog via
+  Context7 before inventing an inline SVG or guessing a name:
+
+  ```text
+  query-docs: libraryId="/lucide-icons/lucide",
+     query="<concept e.g. 'check sun moon'> icon named import props"
+  ```
+
+  Pick the shortest matching PascalCase name from the documented list
+  (e.g. `Check`, not `CheckIcon`). Fall back to inline `<svg>` only if
+  no Lucide icon matches.
 
 ## Project layout
 

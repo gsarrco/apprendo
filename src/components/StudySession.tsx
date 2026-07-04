@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Rating, type Grade } from 'ts-fsrs';
 import { getDb } from '../db';
@@ -119,19 +120,7 @@ export function StudySession() {
       <div className="space-y-8">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-8 py-12 text-center dark:border-emerald-500/20 dark:bg-emerald-500/10">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-6 w-6"
-              aria-hidden="true"
-            >
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
+            <Check className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
           </div>
           <h2 className="text-lg font-bold">All done!</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
