@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Layout, DeckIndex } from './components/AppLayout';
 import { DeckDetail } from './components/CardList';
 import { StudySession } from './components/StudySession';
+import { ToastProvider } from './components/Toast';
 
 const router = createBrowserRouter([
   {
@@ -17,5 +18,9 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ToastProvider>
+      <RouterProvider router={router} />
+    </ToastProvider>
+  );
 }
