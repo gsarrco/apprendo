@@ -6,7 +6,8 @@ import { createEmptyCard } from '../fsrs/scheduler';
 import { fromFsrsCard } from '../fsrs/mappers';
 import type { CardDoc } from '../types';
 import { useCards } from '../hooks/useCards';
-import { btnPrimary, inputClass } from './ui';
+import { btnPrimary, btnGhost, inputClass } from './ui';
+import { Trash2 } from 'lucide-react';
 
 const STATE_LABELS = ['New', 'Learning', 'Review', 'Relearning'];
 
@@ -93,15 +94,33 @@ export function CardList({ deckId }: { deckId: string }) {
                   {card.back}
                 </div>
               </div>
-              <div className="flex shrink-0 flex-col items-end gap-1 text-xs text-zinc-400 dark:text-zinc-500">
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-[0.7rem] capitalize ${STATE_STYLES[card.state] ?? STATE_STYLES[0]}`}
+              <div className="flex shrink-0 items-center gap-2">
+                <div className="flex flex-col items-end gap-1 text-xs text-zinc-400 dark:text-zinc-500">
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[0.7rem] capitalize ${STATE_STYLES[card.state] ?? STATE_STYLES[0]}`}
+                  >
+                    {STATE_LABELS[card.state] ?? card.state}
+                  </span>
+                  <span className="whitespace-nowrap">
+                    due {new Date(card.due).toLocaleString()}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Delete card"
+                  onClick={async () => {
+                    const db = await getDb();
+                    const doc = await db.cards
+                      .findOne({
+                        selector: { id: card.id }
+                      })
+                      .exec();
+                    await doc?.remove();
+                  }}
+                  className={btnGhost}
                 >
-                  {STATE_LABELS[card.state] ?? card.state}
-                </span>
-                <span className="whitespace-nowrap">
-                  due {new Date(card.due).toLocaleString()}
-                </span>
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </button>
               </div>
             </li>
           ))}
