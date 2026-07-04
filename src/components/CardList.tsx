@@ -8,7 +8,7 @@ import type { CardDoc } from '../types';
 import { fetchImages, type WikiImage } from '../wiki';
 import { useCards } from '../hooks/useCards';
 import { useDeck } from '../hooks/useDecks';
-import { btnPrimary, btnGhost, inputClass } from './ui';
+import { btnPrimary, inputClass } from './ui';
 import { Check } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { DeleteButton } from './DeleteButton';
@@ -46,25 +46,22 @@ function toThumb(img: WikiImage): Thumb {
 }
 
 export function CardForm({ deckId }: { deckId: string }) {
-  const [word, setWord] = useState('');
+  const [search, setSearch] = useState('');
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
-  const [phase, setPhase] = useState<'word' | 'form'>('word');
   const [loading, setLoading] = useState(false);
   const [thumbs, setThumbs] = useState<Thumb[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const { notify } = useToast();
 
-  async function populate(e: React.FormEvent) {
-    e.preventDefault();
-    const w = word.trim();
-    if (!w) return;
-    setBack(w);
+  async function searchImages() {
+    const q = search.trim();
+    if (!q) return;
     setLoading(true);
     setThumbs([]);
     setSelected(null);
     try {
-      const images = await fetchImages(w, 3);
+      const images = await fetchImages(q, 3);
       setThumbs(images.map(toThumb));
     } catch (err) {
       setThumbs([]);
@@ -74,16 +71,7 @@ export function CardForm({ deckId }: { deckId: string }) {
       );
     } finally {
       setLoading(false);
-      setPhase('form');
     }
-  }
-
-  function changeWord() {
-    setPhase('word');
-    setThumbs([]);
-    setSelected(null);
-    setFront('');
-    setBack('');
   }
 
   async function submit(e: React.FormEvent) {
@@ -110,34 +98,34 @@ export function CardForm({ deckId }: { deckId: string }) {
       await db.cards.insert(doc);
       setFront('');
       setBack('');
-      setWord('');
+      setSearch('');
       setThumbs([]);
       setSelected(null);
-      setPhase('word');
     } catch (err) {
       notify(`Could not save card: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  if (phase === 'word') {
-    return (
-      <form className="grid gap-2" onSubmit={populate}>
-        <input
-          placeholder="Word to memorise"
-          value={word}
-          onChange={(e) => setWord(e.target.value)}
-          className={inputClass}
-          autoFocus
-        />
-        <button type="submit" className={`${btnPrimary} justify-self-start`}>
-          Populate
-        </button>
-      </form>
-    );
-  }
-
   return (
     <form className="grid gap-2" onSubmit={submit}>
+      <div className="flex gap-2">
+        <input
+          placeholder="Search images"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              e.stopPropagation();
+              searchImages();
+            }
+          }}
+          className={inputClass}
+        />
+        <button type="button" onClick={searchImages} className={btnPrimary}>
+          Search
+        </button>
+      </div>
       {loading ? (
         <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
           <div className="h-full w-1/3 animate-pulse rounded-full bg-indigo-500" />
@@ -187,9 +175,6 @@ export function CardForm({ deckId }: { deckId: string }) {
       <div className="flex items-center gap-2 justify-self-start">
         <button type="submit" className={btnPrimary}>
           Add card
-        </button>
-        <button type="button" onClick={changeWord} className={btnGhost}>
-          Change word
         </button>
       </div>
     </form>
