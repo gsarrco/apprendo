@@ -9,8 +9,9 @@ import { fetchImages, type WikiImage } from '../wiki';
 import { useCards } from '../hooks/useCards';
 import { useDeck } from '../hooks/useDecks';
 import { btnPrimary, btnGhost, inputClass } from './ui';
-import { Trash2, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import { DeleteButton } from './DeleteButton';
 
 const STATE_LABELS = ['New', 'Learning', 'Review', 'Relearning'];
 
@@ -197,7 +198,6 @@ export function CardForm({ deckId }: { deckId: string }) {
 
 export function CardList({ deckId }: { deckId: string }) {
   const cards = useCards(deckId);
-  const { notify } = useToast();
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
@@ -244,26 +244,16 @@ export function CardList({ deckId }: { deckId: string }) {
                     due {new Date(card.due).toLocaleString()}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Delete card"
-                   onClick={async () => {
-                     try {
-                       const db = await getDb();
-                       const doc = await db.cards
-                         .findOne({
-                           selector: { id: card.id }
-                         })
-                         .exec();
-                       await doc?.remove();
-                     } catch (err) {
-                       notify(`Could not delete card: ${err instanceof Error ? err.message : String(err)}`);
-                     }
-                   }}
-                  className={btnGhost}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                </button>
+                <DeleteButton
+                  label="Delete card"
+                  onDelete={async () => {
+                    const db = await getDb();
+                    const doc = await db.cards
+                      .findOne({ selector: { id: card.id } })
+                      .exec();
+                    await doc?.remove();
+                  }}
+                />
               </div>
             </li>
           ))}

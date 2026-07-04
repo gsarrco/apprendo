@@ -5,6 +5,7 @@ import { getDb } from '../db';
 import type { Deck } from '../types';
 import { btnPrimary, inputClass } from './ui';
 import { useToast } from '../hooks/useToast';
+import { DeleteButton } from './DeleteButton';
 
 export function DeckForm() {
   const [name, setName] = useState('');
@@ -61,7 +62,23 @@ export function DeckList({ decks }: { decks: Deck[] }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
       {decks.map((deck) => (
-        <li key={deck.id}>
+        <li key={deck.id} className="relative">
+          <DeleteButton
+            label="Delete deck"
+            confirmMessage={`Delete "${deck.name}" and all its cards?`}
+            onDelete={async () => {
+              const db = await getDb();
+              const cards = await db.cards
+                .find({ selector: { deckId: deck.id } })
+                .exec();
+              await Promise.all(cards.map((c) => c.remove()));
+              const doc = await db.decks
+                .findOne({ selector: { id: deck.id } })
+                .exec();
+              await doc?.remove();
+            }}
+            className="absolute right-2 top-2 z-10"
+          />
           <Link
             to={`/deck/${deck.id}`}
             className="group flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-indigo-500"
