@@ -10,6 +10,7 @@ import { useDueCards } from '../hooks/useDueCards';
 import type { CardDoc } from '../types';
 import { RatingButtons } from './RatingButtons';
 import { btnPrimary, btnSecondary } from './ui';
+import { useToast } from '../hooks/useToast';
 
 function formatInterval(ms: number): string {
   if (ms < 60_000) return `${Math.max(1, Math.round(ms / 1000))}s`;
@@ -40,6 +41,7 @@ export function StudySession() {
   const [seenIds, setSeenIds] = useState<string[]>([]);
   const [showBack, setShowBack] = useState(false);
   const [busy, setBusy] = useState(false);
+  const { notify } = useToast();
 
   const queue = useMemo(
     () => due.filter((c) => !seenIds.includes(c.id)),
@@ -85,32 +87,38 @@ export function StudySession() {
       deckId: cardDoc.deckId,
       front: cardDoc.front,
       back: cardDoc.back,
+      image_url: cardDoc.image_url,
+      image_attribution: cardDoc.image_attribution,
       createdAt: cardDoc.createdAt
     });
-    const db = await getDb();
-    const rxDoc = await db.cards.findOne(cardDoc.id).exec();
-    if (rxDoc) {
-      await rxDoc.patch({
-        due: updated.due,
-        stability: updated.stability,
-        difficulty: updated.difficulty,
-        elapsed_days: updated.elapsed_days,
-        scheduled_days: updated.scheduled_days,
-        learning_steps: updated.learning_steps,
-        reps: updated.reps,
-        lapses: updated.lapses,
-        state: updated.state,
-        last_review: updated.last_review,
-        updatedAt: updated.updatedAt
-      });
+    try {
+      const db = await getDb();
+      const rxDoc = await db.cards.findOne(cardDoc.id).exec();
+      if (rxDoc) {
+        await rxDoc.patch({
+          due: updated.due,
+          stability: updated.stability,
+          difficulty: updated.difficulty,
+          elapsed_days: updated.elapsed_days,
+          scheduled_days: updated.scheduled_days,
+          learning_steps: updated.learning_steps,
+          reps: updated.reps,
+          lapses: updated.lapses,
+          state: updated.state,
+          last_review: updated.last_review,
+          updatedAt: updated.updatedAt
+        });
+      }
+      await db.reviewlogs.insert(
+        fromFsrsLog(result.log, nanoid(), cardDoc.id)
+      );
+      setSeenIds((prev) => [...prev, cardDoc.id]);
+      setShowBack(false);
+    } catch (err) {
+      notify(`Could not save review: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setBusy(false);
     }
-    await db.reviewlogs.insert(
-      fromFsrsLog(result.log, nanoid(), cardDoc.id)
-    );
-
-    setSeenIds((prev) => [...prev, cardDoc.id]);
-    setShowBack(false);
-    setBusy(false);
   }
 
   if (!deckId) return <p>Missing deck.</p>;
@@ -166,6 +174,13 @@ export function StudySession() {
         >
           {STATE_LABELS[current.state] ?? current.state}
         </span>
+        {current.image_url ? (
+          <img
+            src={current.image_url}
+            alt=""
+            className="max-h-[200px] w-full rounded-xl object-contain"
+          />
+        ) : null}
         <div className="text-xl font-semibold leading-relaxed whitespace-pre-wrap">
           {current.front}
         </div>
@@ -176,6 +191,11 @@ export function StudySession() {
               {current.back}
             </div>
           </>
+        ) : null}
+        {current.image_attribution ? (
+          <div className="mt-auto text-[0.65rem] text-zinc-400 dark:text-zinc-500">
+            {current.image_attribution}
+          </div>
         ) : null}
       </div>
 

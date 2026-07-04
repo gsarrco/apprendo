@@ -7,6 +7,7 @@ import {
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
+import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
 import { deckSchema } from './schemas/deck.schema';
 import { cardSchema } from './schemas/card.schema';
 import { reviewLogSchema } from './schemas/reviewLog.schema';
@@ -31,6 +32,7 @@ export function getDb(): Promise<AppDatabase> {
     if (import.meta.env.DEV) {
       addRxPlugin(RxDBDevModePlugin);
     }
+    addRxPlugin(RxDBMigrationSchemaPlugin);
     dbPromise = createRxDatabase<AppCollections>({
       name: 'apprendodb',
       storage: wrappedValidateAjvStorage({ storage: getRxStorageDexie() }),
@@ -38,7 +40,16 @@ export function getDb(): Promise<AppDatabase> {
     }).then(async (db: AppDatabase) => {
       await db.addCollections({
         decks: { schema: deckSchema },
-        cards: { schema: cardSchema },
+        cards: {
+          schema: cardSchema,
+          migrationStrategies: {
+            1: (oldDoc: Record<string, unknown>) => ({
+              ...oldDoc,
+              image_url: null,
+              image_attribution: null
+            })
+          }
+        },
         reviewlogs: { schema: reviewLogSchema }
       });
       return db;

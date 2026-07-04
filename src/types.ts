@@ -11,6 +11,8 @@ export interface CardDoc {
   deckId: string;
   front: string;
   back: string;
+  image_url: string | null;
+  image_attribution: string | null;
 
   due: string;
   stability: number;

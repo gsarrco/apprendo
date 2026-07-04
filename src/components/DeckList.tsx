@@ -4,9 +4,11 @@ import { Link } from 'react-router-dom';
 import { getDb } from '../db';
 import type { Deck } from '../types';
 import { btnPrimary, inputClass } from './ui';
+import { useToast } from '../hooks/useToast';
 
 export function DeckForm() {
   const [name, setName] = useState('');
+  const { notify } = useToast();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,8 +20,12 @@ export function DeckForm() {
       name: trimmed,
       createdAt: Date.now()
     };
-    await db.decks.insert(deck);
-    setName('');
+    try {
+      await db.decks.insert(deck);
+      setName('');
+    } catch (err) {
+      notify(`Could not create deck: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   return (

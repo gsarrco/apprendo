@@ -1,5 +1,5 @@
 export const cardSchema = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   properties: {
@@ -7,6 +7,8 @@ export const cardSchema = {
     deckId: { type: 'string', maxLength: 100 },
     front: { type: 'string' },
     back: { type: 'string' },
+    image_url: { type: ['string', 'null'] },
+    image_attribution: { type: ['string', 'null'] },
     due: { type: 'string', maxLength: 40 },
     stability: { type: 'number' },
     difficulty: { type: 'number' },
