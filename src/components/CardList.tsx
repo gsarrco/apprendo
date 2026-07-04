@@ -6,6 +6,7 @@ import { createEmptyCard } from '../fsrs/scheduler';
 import { fromFsrsCard } from '../fsrs/mappers';
 import type { CardDoc } from '../types';
 import { useCards } from '../hooks/useCards';
+import { useDeck } from '../hooks/useDecks';
 import { btnPrimary, btnGhost, inputClass } from './ui';
 import { Trash2 } from 'lucide-react';
 
@@ -132,6 +133,7 @@ export function CardList({ deckId }: { deckId: string }) {
 
 export function DeckDetail() {
   const { deckId } = useParams();
+  const deck = useDeck(deckId ?? '');
   if (!deckId) return <p>Missing deck.</p>;
   return (
     <div className="space-y-6">
@@ -144,7 +146,7 @@ export function DeckDetail() {
         </Link>
         <span className="text-zinc-300 dark:text-zinc-600">/</span>
         <span className="font-medium text-zinc-700 dark:text-zinc-300">
-          {deckId.slice(0, 8)}
+          {deck?.name ?? deckId.slice(0, 8)}
         </span>
       </nav>
       <div>

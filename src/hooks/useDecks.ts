@@ -21,3 +21,26 @@ export function useDecks(): Deck[] {
   }, []);
   return decks;
 }
+
+export function useDeck(deckId: string): Deck | undefined {
+  const [deck, setDeck] = useState<Deck | undefined>(undefined);
+  useEffect(() => {
+    let sub: Subscription | undefined;
+    let active = true;
+    getDb().then((db) => {
+      if (!active) return;
+      sub = db.decks
+        .findOne({
+          selector: { id: deckId }
+        })
+        .$.subscribe((doc) => {
+          setDeck(doc ? (doc.toJSON(true) as unknown as Deck) : undefined);
+        });
+    });
+    return () => {
+      active = false;
+      sub?.unsubscribe();
+    };
+  }, [deckId]);
+  return deck;
+}
