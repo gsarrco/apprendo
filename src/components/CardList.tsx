@@ -178,120 +178,130 @@ export function CardForm({
   }
 
   return (
-    <form className="grid gap-2" onSubmit={submit}>
-      <div className="flex gap-2">
-        <input
-          placeholder="Search images"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              e.stopPropagation();
-              searchImages();
-            }
-          }}
-          className={inputClass}
-        />
-        <button type="button" onClick={searchImages} className={btnPrimary}>
-          Search
-        </button>
-      </div>
-      {loading ? (
-        <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-          <div className="h-full w-1/3 animate-pulse rounded-full bg-indigo-500" />
-        </div>
-      ) : null}
-      {!loading && thumbs.length > 0 ? (
+    <form className="grid gap-3" onSubmit={submit}>
+      <section className="grid gap-2">
+        <h2 className="text-sm font-semibold leading-6 text-zinc-900 dark:text-zinc-100">
+          Front
+        </h2>
         <div className="flex gap-2">
-          {thumbs.map((t, i) => (
-            <button
-              key={t.url}
-              type="button"
-              onClick={() => setSelected(selected === i ? null : i)}
-              className={`relative aspect-square flex-1 overflow-hidden rounded-xl border-2 transition ${
-                selected === i
-                  ? 'border-indigo-500 ring-2 ring-indigo-500/30'
-                  : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'
-              }`}
-            >
-              <img
-                src={t.url}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-              {selected === i ? (
-                <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white">
-                  <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
-                </span>
-              ) : null}
-            </button>
-          ))}
+          <input
+            placeholder="Search images"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                searchImages();
+              }
+            }}
+            className={inputClass}
+          />
+          <button type="button" onClick={searchImages} className={btnPrimary}>
+            Search
+          </button>
         </div>
-      ) : null}
-      <textarea
-        placeholder="Front"
-        value={front}
-        onChange={(e) => setFront(e.target.value)}
-        rows={2}
-        className={`${inputClass} resize-y`}
-      />
-      <textarea
-        placeholder="Back"
-        value={back}
-        onChange={(e) => setBack(e.target.value)}
-        rows={2}
-        className={`${inputClass} resize-y`}
-      />
-      {language ? (
-        <>
-          <div className="flex gap-2">
-            <input
-              placeholder="Search audio"
-              value={audioSearch}
-              onChange={(e) => setAudioSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  searchAudios();
-                }
-              }}
-              className={inputClass}
-            />
-            <button type="button" onClick={searchAudios} className={btnPrimary}>
-              Search
-            </button>
+        {loading ? (
+          <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-indigo-500" />
           </div>
-          {audioLoading ? (
-            <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-              <div className="h-full w-1/3 animate-pulse rounded-full bg-indigo-500" />
-            </div>
-          ) : null}
-          {!audioLoading && audios.length > 0 ? (
-            <div className="flex gap-2">
-              {audios.map((t, i) => (
-                <button
-                  key={t.url}
-                  type="button"
-                  onClick={() => setAudioSelected(audioSelected === i ? null : i)}
-                  onMouseEnter={() => playAudio(t.url)}
-                  className={`flex aspect-square flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 p-2 text-center transition ${
-                    audioSelected === i
-                      ? 'border-indigo-500 ring-2 ring-indigo-500/30'
-                      : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'
-                  }`}
-                >
-                  <Volume2 className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
-                  <span className="line-clamp-3 text-[0.65rem] leading-tight text-zinc-600 dark:text-zinc-300">
-                    {t.attribution}
+        ) : null}
+        {!loading && thumbs.length > 0 ? (
+          <div className="flex gap-2">
+            {thumbs.map((t, i) => (
+              <button
+                key={t.url}
+                type="button"
+                onClick={() => setSelected(selected === i ? null : i)}
+                className={`relative aspect-square flex-1 overflow-hidden rounded-xl border-2 transition ${
+                  selected === i
+                    ? 'border-indigo-500 ring-2 ring-indigo-500/30'
+                    : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'
+                }`}
+              >
+                <img
+                  src={t.url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+                {selected === i ? (
+                  <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white">
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
                   </span>
-                </button>
-              ))}
+                ) : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <textarea
+          placeholder="Front"
+          value={front}
+          onChange={(e) => setFront(e.target.value)}
+          rows={2}
+          className={`${inputClass} resize-y`}
+        />
+      </section>
+      <section className="grid gap-2">
+        <h2 className="text-sm font-semibold leading-6 text-zinc-900 dark:text-zinc-100">
+          Back
+        </h2>
+        <textarea
+          placeholder="Back"
+          value={back}
+          onChange={(e) => setBack(e.target.value)}
+          rows={2}
+          className={`${inputClass} resize-y`}
+        />
+        {language ? (
+          <>
+            <div className="flex gap-2">
+              <input
+                placeholder="Search audio"
+                value={audioSearch}
+                onChange={(e) => setAudioSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    searchAudios();
+                  }
+                }}
+                className={inputClass}
+              />
+              <button type="button" onClick={searchAudios} className={btnPrimary}>
+                Search
+              </button>
             </div>
-          ) : null}
-        </>
-      ) : null}
+            {audioLoading ? (
+              <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                <div className="h-full w-1/3 animate-pulse rounded-full bg-indigo-500" />
+              </div>
+            ) : null}
+            {!audioLoading && audios.length > 0 ? (
+              <div className="flex gap-2">
+                {audios.map((t, i) => (
+                  <button
+                    key={t.url}
+                    type="button"
+                    onClick={() => setAudioSelected(audioSelected === i ? null : i)}
+                    onMouseEnter={() => playAudio(t.url)}
+                    className={`flex aspect-square flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 p-2 text-center transition ${
+                      audioSelected === i
+                        ? 'border-indigo-500 ring-2 ring-indigo-500/30'
+                        : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'
+                    }`}
+                  >
+                    <Volume2 className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
+                    <span className="line-clamp-3 text-[0.65rem] leading-tight text-zinc-600 dark:text-zinc-300">
+                      {t.attribution}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </section>
       <div className="flex items-center gap-2 justify-self-start">
         <button type="submit" className={btnPrimary}>
           Add card
