@@ -1,27 +1,36 @@
 name: Build and deploy to Danube Data static site
+
 on:
   push:
     branches:
       - main
+
 jobs:
   deploy:
     runs-on: codeberg-small
+
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
+
       - name: Set up Node.js
         uses: https://code.forgejo.org/actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build
         run: npm run build
-      - name: Install DanubeData CLI
-        run: npm install -g @danubedata/cli
+
+      - name: Zip dist
+        run: cd dist && zip -r ../dist.zip . && cd ..
+
       - name: Deploy to Danube Data
-        run: danube pages deploy --dir ./dist
-        env:
-          DANUBE_TOKEN: ${{ secrets.DANUBEDATA_API_TOKEN }}
-          DANUBE_SITE_ID: ${{ secrets.DANUBEDATA_SITE_ID }}
-          DANUBE_TEAM_ID: ${{ secrets.DANUBEDATA_TEAM_ID }}
+        run: |
+          curl --fail-with-body -X POST \
+            "https://api.danubedata.ro/api/v1/static-sites/${{ secrets.DANUBEDATA_SITE_ID }}/deploy" \
+            -H "Authorization: Bearer ${{ secrets.DANUBEDATA_API_TOKEN }}" \
+            -H "X-Team-Id: ${{ secrets.DANUBEDATA_TEAM_ID }}" \
+            -F "file=@./dist.zip"
