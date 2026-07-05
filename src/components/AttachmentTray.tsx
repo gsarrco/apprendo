@@ -49,20 +49,27 @@ function TrayTile({ item, onRemove }: TrayTileProps) {
       {...attributes}
       {...listeners}
       title={item.attribution ?? undefined}
-      className="relative flex h-12 w-12 cursor-grab items-center justify-center overflow-hidden rounded-lg border-2 border-zinc-200 bg-white transition active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-900"
+      className="group relative flex cursor-grab items-center gap-2 overflow-hidden rounded-lg border-2 border-zinc-200 bg-white p-1 pr-2 transition active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-900"
     >
-      {item.type === 'image' ? (
-        <img
-          src={item.url}
-          alt=""
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <Volume2
-          className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
-          aria-hidden="true"
-        />
-      )}
+      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md">
+        {item.type === 'image' ? (
+          <img
+            src={item.url}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+            <Volume2
+              className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
+              aria-hidden="true"
+            />
+          </div>
+        )}
+      </div>
+      <span className="line-clamp-2 max-w-[8rem] text-xs leading-tight text-zinc-700 dark:text-zinc-200">
+        {item.caption}
+      </span>
       <button
         type="button"
         aria-label="Remove attachment"
@@ -101,16 +108,15 @@ export function AttachmentTray({ items, onChange }: AttachmentTrayProps) {
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={items.map((i) => i.url)} strategy={rectSortingStrategy}>
-        <div className="group flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1">
           {items.map((item) => (
-            <div key={item.url} className="group relative">
-              <TrayTile
-                item={item}
-                onRemove={() =>
-                  onChange(items.filter((x) => x.url !== item.url))
-                }
-              />
-            </div>
+            <TrayTile
+              key={item.url}
+              item={item}
+              onRemove={() =>
+                onChange(items.filter((x) => x.url !== item.url))
+              }
+            />
           ))}
         </div>
       </SortableContext>

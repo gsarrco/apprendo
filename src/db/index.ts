@@ -71,6 +71,7 @@ export function getDb(): Promise<AppDatabase> {
                   ? {
                       type,
                       url: old[urlKey] as string,
+                      caption: '',
                       attribution: (old[attrKey] as string | null) ?? null,
                       createdAt: old.createdAt as number
                     }
@@ -104,6 +105,20 @@ export function getDb(): Promise<AppDatabase> {
                 ...rest,
                 front_attachments: toList(old.front_attachment),
                 back_attachments: toList(old.back_attachment)
+              };
+            },
+            5: (old: Record<string, unknown>) => {
+              const addCaption = (list: unknown): CardAttachment[] =>
+                Array.isArray(list)
+                  ? list.map((item) => ({
+                      ...(item as CardAttachment),
+                      caption: (item as CardAttachment).caption ?? ''
+                    }))
+                  : [];
+              return {
+                ...old,
+                front_attachments: addCaption(old.front_attachments),
+                back_attachments: addCaption(old.back_attachments)
               };
             }
           }

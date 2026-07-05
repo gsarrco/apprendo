@@ -1,4 +1,5 @@
 import type { CommonsMedium } from '../integrations/commonsApi';
+import type { AttachmentType } from '../types';
 
 export interface Thumb {
   url: string;
@@ -9,6 +10,15 @@ export function stripHtml(s: string): string {
   return new DOMParser()
     .parseFromString(s, 'text/html')
     .body.textContent?.trim() ?? '';
+}
+
+export function captionFromTitle(title: string, type: AttachmentType): string {
+  let s = title.replace(/^File:/, '').replace(/_/g, ' ').trim();
+  s = s.replace(/\.[^.]+$/, '').trim();
+  if (type === 'audio') {
+    return s.split('-').pop() ?? s;
+  }
+  return s;
 }
 
 export function toThumb(m: CommonsMedium): Thumb {

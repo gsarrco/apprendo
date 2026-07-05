@@ -5,7 +5,7 @@ import {
   searchCommonsAudio,
   type CommonsMedium
 } from '../integrations/commonsApi';
-import { toThumb } from '../lib/commonsThumb';
+import { toThumb, captionFromTitle } from '../lib/commonsThumb';
 import type { AttachmentType, CardAttachment, Language } from '../types';
 import { AttachmentTray } from './AttachmentTray';
 import { btnPrimary, inputClass } from './ui';
@@ -63,6 +63,7 @@ export function MediaSearch({
       {
         type,
         url: m.url,
+        caption: captionFromTitle(m.title, type),
         attribution: toThumb(m).attribution ?? null,
         createdAt: Date.now()
       }
@@ -121,7 +122,10 @@ export function MediaSearch({
                     aria-hidden="true"
                   />
                 )}
-                <span className="relative line-clamp-3 text-[0.65rem] leading-tight text-zinc-600 dark:text-zinc-300">
+                <span className="relative line-clamp-1 text-xs font-medium leading-tight text-zinc-700 dark:text-zinc-200">
+                  {captionFromTitle(t.title, type)}
+                </span>
+                <span className="relative line-clamp-2 text-[0.6rem] leading-tight text-zinc-400 dark:text-zinc-500">
                   {toThumb(t).attribution}
                 </span>
                 {isSelected ? (

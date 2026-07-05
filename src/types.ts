@@ -18,6 +18,7 @@ export type AttachmentType = 'image' | 'audio';
 export interface CardAttachment {
   type: AttachmentType;
   url: string;
+  caption: string;
   attribution: string | null;
   createdAt: number;
 }

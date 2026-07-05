@@ -3,10 +3,11 @@ export const attachmentItemProperty = {
   properties: {
     type: { type: 'string', enum: ['image', 'audio'] },
     url: { type: 'string' },
+    caption: { type: 'string' },
     attribution: { type: ['string', 'null'] },
     createdAt: { type: 'number' }
   },
-  required: ['type', 'url', 'attribution', 'createdAt']
+  required: ['type', 'url', 'caption', 'attribution', 'createdAt']
 } as const;
 
 export const attachmentListProperty = {
