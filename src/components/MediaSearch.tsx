@@ -5,7 +5,7 @@ import {
   searchCommonsAudio,
   type CommonsMedium
 } from '../integrations/commonsApi';
-import { toThumb, captionFromTitle } from '../lib/commonsThumb';
+import { toThumb, captionFromTitle, playAudio } from '../lib/commonsThumb';
 import type { AttachmentType, CardAttachment, Language } from '../types';
 import { AttachmentTray } from './AttachmentTray';
 import { btnPrimary, inputClass } from './ui';
@@ -54,6 +54,7 @@ export function MediaSearch({
   }
 
   function toggle(m: CommonsMedium) {
+    if (type === 'audio') playAudio(m.url);
     if (selected.some((s) => s.url === m.url)) {
       onChange(selected.filter((s) => s.url !== m.url));
       return;

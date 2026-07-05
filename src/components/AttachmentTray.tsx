@@ -15,6 +15,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Trash2, Volume2 } from 'lucide-react';
 import type { CardAttachment } from '../types';
+import { playAudio } from '../lib/commonsThumb';
 
 interface AttachmentTrayProps {
   items: CardAttachment[];
@@ -51,7 +52,15 @@ function TrayTile({ item, onRemove }: TrayTileProps) {
       title={item.attribution ?? undefined}
       className="group relative flex cursor-grab items-center gap-2 overflow-hidden rounded-lg border-2 border-zinc-200 bg-white p-1 pr-2 transition active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-900"
     >
-      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md">
+      <button
+        type="button"
+        aria-label={item.type === 'audio' ? 'Play audio' : 'View attachment'}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (item.type === 'audio') playAudio(item.url);
+        }}
+        className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md"
+      >
         {item.type === 'image' ? (
           <img
             src={item.url}
@@ -66,7 +75,7 @@ function TrayTile({ item, onRemove }: TrayTileProps) {
             />
           </div>
         )}
-      </div>
+      </button>
       <span className="line-clamp-2 max-w-[8rem] text-xs leading-tight text-zinc-700 dark:text-zinc-200">
         {item.caption}
       </span>
