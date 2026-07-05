@@ -144,10 +144,22 @@ export function CardForm({
       deckId,
       front: f,
       back: b,
-      image_url: thumb?.url ?? null,
-      image_attribution: thumb?.attribution ?? null,
-      audio_url: audio?.url ?? null,
-      audio_attribution: audio?.attribution ?? null,
+      front_attachment: thumb
+        ? {
+            type: 'image',
+            url: thumb.url,
+            attribution: thumb.attribution ?? null,
+            createdAt: Date.now()
+          }
+        : null,
+      back_attachment: audio
+        ? {
+            type: 'audio',
+            url: audio.url,
+            attribution: audio.attribution ?? null,
+            createdAt: Date.now()
+          }
+        : null,
       createdAt: Date.now()
     });
     try {
@@ -318,23 +330,23 @@ export function CardList({
               className="flex items-start justify-between gap-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
               <div className="grid flex-1 gap-0.5">
-                {card.image_url ? (
+                {card.front_attachment?.type === 'image' ? (
                   <img
-                    src={card.image_url}
+                    src={card.front_attachment.url}
                     alt=""
                     className="h-12 w-12 shrink-0 rounded-lg object-cover"
                   />
                 ) : null}
                 <div className="flex items-center gap-1.5 font-semibold text-zinc-900 dark:text-zinc-100">
                   {card.front}
-                  {card.audio_url ? (
+                  {card.back_attachment?.type === 'audio' ? (
                     <button
                       type="button"
                       aria-label="Play audio"
-                      onMouseEnter={() => playAudio(card.audio_url)}
+                      onMouseEnter={() => playAudio(card.back_attachment!.url)}
                       onClick={(e) => {
                         e.stopPropagation();
-                        playAudio(card.audio_url);
+                        playAudio(card.back_attachment!.url);
                       }}
                       className="text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
                     >

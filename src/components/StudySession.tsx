@@ -52,19 +52,19 @@ export function StudySession() {
   const current = queue[0];
 
   useEffect(() => {
-    if (!showBack || !current?.audio_url) return;
+    if (!showBack || current?.back_attachment?.type !== 'audio') return;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
-    const audio = new Audio(current.audio_url);
+    const audio = new Audio(current.back_attachment!.url);
     audioRef.current = audio;
     void audio.play().catch(() => {});
     return () => {
       audio.pause();
       if (audioRef.current === audio) audioRef.current = null;
     };
-  }, [showBack, current?.id, current?.audio_url]);
+  }, [showBack, current?.id, current?.back_attachment]);
 
   const previews = useMemo(() => {
     if (!current) return {};
@@ -103,10 +103,8 @@ export function StudySession() {
       deckId: cardDoc.deckId,
       front: cardDoc.front,
       back: cardDoc.back,
-      image_url: cardDoc.image_url,
-      image_attribution: cardDoc.image_attribution,
-      audio_url: cardDoc.audio_url,
-      audio_attribution: cardDoc.audio_attribution,
+      front_attachment: cardDoc.front_attachment,
+      back_attachment: cardDoc.back_attachment,
       createdAt: cardDoc.createdAt
     });
     try {
@@ -192,9 +190,9 @@ export function StudySession() {
         >
           {STATE_LABELS[current.state] ?? current.state}
         </span>
-        {current.image_url ? (
+        {current.front_attachment?.type === 'image' ? (
           <img
-            src={current.image_url}
+            src={current.front_attachment.url}
             alt=""
             className="max-h-[200px] w-full rounded-xl object-contain"
           />
@@ -209,7 +207,7 @@ export function StudySession() {
               <div className="text-lg leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
                 {current.back}
               </div>
-              {current.audio_url ? (
+              {current.back_attachment?.type === 'audio' ? (
                 <button
                   type="button"
                   aria-label="Replay audio"
@@ -218,8 +216,8 @@ export function StudySession() {
                       audioRef.current.pause();
                       audioRef.current = null;
                     }
-                    if (!current.audio_url) return;
-                    const audio = new Audio(current.audio_url);
+                    if (current.back_attachment?.type !== 'audio') return;
+                    const audio = new Audio(current.back_attachment.url);
                     audioRef.current = audio;
                     void audio.play().catch(() => {});
                   }}
@@ -231,14 +229,14 @@ export function StudySession() {
             </div>
           </>
         ) : null}
-        {current.image_attribution ? (
+        {current.front_attachment?.attribution ? (
           <div className="mt-auto text-[0.65rem] text-zinc-400 dark:text-zinc-500">
-            {current.image_attribution}
+            {current.front_attachment.attribution}
           </div>
         ) : null}
-        {showBack && current.audio_attribution ? (
+        {showBack && current.back_attachment?.attribution ? (
           <div className="text-[0.65rem] text-zinc-400 dark:text-zinc-500">
-            {current.audio_attribution}
+            {current.back_attachment.attribution}
           </div>
         ) : null}
       </div>

@@ -18,7 +18,7 @@ export function toFsrsCard(doc: CardDoc): FsrsCard {
 
 export function fromFsrsCard(
   card: FsrsCard,
-  base: Pick<CardDoc, 'id' | 'deckId' | 'front' | 'back' | 'image_url' | 'image_attribution' | 'audio_url' | 'audio_attribution' | 'createdAt'>
+  base: Pick<CardDoc, 'id' | 'deckId' | 'front' | 'back' | 'front_attachment' | 'back_attachment' | 'createdAt'>
 ): CardDoc {
   return {
     ...base,

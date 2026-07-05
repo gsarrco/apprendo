@@ -11,7 +11,7 @@ import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
 import { deckSchema } from './schemas/deck.schema';
 import { cardSchema } from './schemas/card.schema';
 import { reviewLogSchema } from './schemas/reviewLog.schema';
-import type { Deck, CardDoc, ReviewLogDoc } from '../types';
+import type { Deck, CardDoc, ReviewLogDoc, AttachmentType, CardAttachment } from '../types';
 
 export type DeckCollection = RxCollection<Deck>;
 export type CardCollection = RxCollection<CardDoc>;
@@ -60,7 +60,40 @@ export function getDb(): Promise<AppDatabase> {
               ...oldDoc,
               audio_url: null,
               audio_attribution: null
-            })
+            }),
+            3: (old: Record<string, unknown>) => {
+              const build = (
+                urlKey: string,
+                attrKey: string,
+                type: AttachmentType
+              ): CardAttachment | null =>
+                old[urlKey] != null
+                  ? {
+                      type,
+                      url: old[urlKey] as string,
+                      attribution: (old[attrKey] as string | null) ?? null,
+                      createdAt: old.createdAt as number
+                    }
+                  : null;
+              const rest = { ...old };
+              delete rest.image_url;
+              delete rest.image_attribution;
+              delete rest.audio_url;
+              delete rest.audio_attribution;
+              return {
+                ...rest,
+                front_attachment: build(
+                  'image_url',
+                  'image_attribution',
+                  'image'
+                ),
+                back_attachment: build(
+                  'audio_url',
+                  'audio_attribution',
+                  'audio'
+                )
+              };
+            }
           }
         },
         reviewlogs: { schema: reviewLogSchema }

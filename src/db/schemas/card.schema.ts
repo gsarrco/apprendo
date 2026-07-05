@@ -1,5 +1,7 @@
+import { attachmentProperty } from './attachment.schema';
+
 export const cardSchema = {
-  version: 2,
+  version: 3,
   primaryKey: 'id',
   type: 'object',
   properties: {
@@ -7,10 +9,8 @@ export const cardSchema = {
     deckId: { type: 'string', maxLength: 100 },
     front: { type: 'string' },
     back: { type: 'string' },
-    image_url: { type: ['string', 'null'] },
-    image_attribution: { type: ['string', 'null'] },
-    audio_url: { type: ['string', 'null'] },
-    audio_attribution: { type: ['string', 'null'] },
+    front_attachment: attachmentProperty,
+    back_attachment: attachmentProperty,
     due: { type: 'string', maxLength: 40 },
     stability: { type: 'number' },
     difficulty: { type: 'number' },

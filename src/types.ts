@@ -13,15 +13,22 @@ export interface Deck {
   createdAt: number;
 }
 
+export type AttachmentType = 'image' | 'audio';
+
+export interface CardAttachment {
+  type: AttachmentType;
+  url: string;
+  attribution: string | null;
+  createdAt: number;
+}
+
 export interface CardDoc {
   id: string;
   deckId: string;
   front: string;
   back: string;
-  image_url: string | null;
-  image_attribution: string | null;
-  audio_url: string | null;
-  audio_attribution: string | null;
+  front_attachment: CardAttachment | null;
+  back_attachment: CardAttachment | null;
 
   due: string;
   stability: number;
