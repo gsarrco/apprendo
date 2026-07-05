@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { searchCommonsAudio } from '../integrations/commonsApi';
-import type { Language } from '../types';
+import { searchCommonsAudio } from '../../src/integrations/commonsApi';
+import type { Language } from '../../src/types';
 
 const GERMAN: Language = { qid: 'Q188', code: 'deu', label: 'German' };
 
