@@ -2,28 +2,35 @@ import { useState } from 'react';
 import { nanoid } from 'nanoid';
 import { Link } from 'react-router-dom';
 import { getDb } from '../db';
-import type { Deck } from '../types';
+import type { Deck, Language } from '../types';
+import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
 import { btnPrimary, inputClass } from './ui';
 import { useToast } from '../hooks/useToast';
 import { DeleteButton } from './DeleteButton';
 
 export function DeckForm() {
   const [name, setName] = useState('');
+  const [languageQid, setLanguageQid] = useState('');
   const { notify } = useToast();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
+    const language: Language | null = languageQid
+      ? LANG_BY_QID[languageQid] ?? null
+      : null;
     const db = await getDb();
     const deck: Deck = {
       id: nanoid(),
       name: trimmed,
+      language,
       createdAt: Date.now()
     };
     try {
       await db.decks.insert(deck);
       setName('');
+      setLanguageQid('');
     } catch (err) {
       notify(`Could not create deck: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -39,6 +46,19 @@ export function DeckForm() {
         autoFocus
         className={inputClass}
       />
+      <select
+        value={languageQid}
+        onChange={(e) => setLanguageQid(e.target.value)}
+        className={inputClass}
+        aria-label="Deck language"
+      >
+        <option value="">No language</option>
+        {LANGUAGES.map((l) => (
+          <option key={l.qid} value={l.qid}>
+            {l.label}
+          </option>
+        ))}
+      </select>
       <button type="submit" className={btnPrimary}>
         Add deck
       </button>

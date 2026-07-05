@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, Volume2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Rating, type Grade } from 'ts-fsrs';
 import { getDb } from '../db';
@@ -42,6 +42,7 @@ export function StudySession() {
   const [showBack, setShowBack] = useState(false);
   const [busy, setBusy] = useState(false);
   const { notify } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const queue = useMemo(
     () => due.filter((c) => !seenIds.includes(c.id)),
@@ -49,6 +50,21 @@ export function StudySession() {
   );
 
   const current = queue[0];
+
+  useEffect(() => {
+    if (!showBack || !current?.audio_url) return;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    const audio = new Audio(current.audio_url);
+    audioRef.current = audio;
+    void audio.play().catch(() => {});
+    return () => {
+      audio.pause();
+      if (audioRef.current === audio) audioRef.current = null;
+    };
+  }, [showBack, current?.id, current?.audio_url]);
 
   const previews = useMemo(() => {
     if (!current) return {};
@@ -89,6 +105,8 @@ export function StudySession() {
       back: cardDoc.back,
       image_url: cardDoc.image_url,
       image_attribution: cardDoc.image_attribution,
+      audio_url: cardDoc.audio_url,
+      audio_attribution: cardDoc.audio_attribution,
       createdAt: cardDoc.createdAt
     });
     try {
@@ -187,14 +205,40 @@ export function StudySession() {
         {showBack ? (
           <>
             <hr className="border-zinc-200 dark:border-zinc-800" />
-            <div className="text-lg leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
-              {current.back}
+            <div className="flex items-start gap-2">
+              <div className="text-lg leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+                {current.back}
+              </div>
+              {current.audio_url ? (
+                <button
+                  type="button"
+                  aria-label="Replay audio"
+                  onClick={() => {
+                    if (audioRef.current) {
+                      audioRef.current.pause();
+                      audioRef.current = null;
+                    }
+                    if (!current.audio_url) return;
+                    const audio = new Audio(current.audio_url);
+                    audioRef.current = audio;
+                    void audio.play().catch(() => {});
+                  }}
+                  className="mt-1 text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
+                >
+                  <Volume2 className="h-5 w-5" aria-hidden="true" />
+                </button>
+              ) : null}
             </div>
           </>
         ) : null}
         {current.image_attribution ? (
           <div className="mt-auto text-[0.65rem] text-zinc-400 dark:text-zinc-500">
             {current.image_attribution}
+          </div>
+        ) : null}
+        {showBack && current.audio_attribution ? (
+          <div className="text-[0.65rem] text-zinc-400 dark:text-zinc-500">
+            {current.audio_attribution}
           </div>
         ) : null}
       </div>

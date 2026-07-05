@@ -1,8 +1,15 @@
 import type { Rating, State } from 'ts-fsrs';
 
+export interface Language {
+  qid: string;
+  code: string;
+  label: string;
+}
+
 export interface Deck {
   id: string;
   name: string;
+  language: Language | null;
   createdAt: number;
 }
 
@@ -13,6 +20,8 @@ export interface CardDoc {
   back: string;
   image_url: string | null;
   image_attribution: string | null;
+  audio_url: string | null;
+  audio_attribution: string | null;
 
   due: string;
   stability: number;

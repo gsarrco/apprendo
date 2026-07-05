@@ -1,5 +1,5 @@
 export const cardSchema = {
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
   properties: {
@@ -9,6 +9,8 @@ export const cardSchema = {
     back: { type: 'string' },
     image_url: { type: ['string', 'null'] },
     image_attribution: { type: ['string', 'null'] },
+    audio_url: { type: ['string', 'null'] },
+    audio_attribution: { type: ['string', 'null'] },
     due: { type: 'string', maxLength: 40 },
     stability: { type: 'number' },
     difficulty: { type: 'number' },

@@ -4,12 +4,17 @@ import { useState } from 'react';
 import { getDb } from '../db';
 import { createEmptyCard } from '../fsrs/scheduler';
 import { fromFsrsCard } from '../fsrs/mappers';
-import type { CardDoc } from '../types';
-import { searchCommonsImages, type CommonsImage } from '../integrations/commonsApi';
+import type { CardDoc, Language } from '../types';
+import {
+  searchCommonsImages,
+  searchCommonsAudio,
+  type CommonsImage
+} from '../integrations/commonsApi';
+import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
 import { useCards } from '../hooks/useCards';
 import { useDeck } from '../hooks/useDecks';
 import { btnPrimary, inputClass } from './ui';
-import { Check } from 'lucide-react';
+import { Check, Volume2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { DeleteButton } from './DeleteButton';
 
@@ -45,13 +50,40 @@ function toThumb(img: CommonsImage): Thumb {
   return { url: img.url, attribution };
 }
 
-export function CardForm({ deckId }: { deckId: string }) {
+let currentAudio: HTMLAudioElement | null = null;
+
+function playAudio(url: string | null) {
+  if (!url) return;
+  try {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+    }
+    const audio = new Audio(url);
+    currentAudio = audio;
+    void audio.play().catch(() => {});
+  } catch {
+    /* ignore */
+  }
+}
+
+export function CardForm({
+  deckId,
+  language
+}: {
+  deckId: string;
+  language: Language | null;
+}) {
   const [search, setSearch] = useState('');
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
   const [loading, setLoading] = useState(false);
   const [thumbs, setThumbs] = useState<Thumb[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const [audioSearch, setAudioSearch] = useState('');
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audios, setAudios] = useState<Thumb[]>([]);
+  const [audioSelected, setAudioSelected] = useState<number | null>(null);
   const { notify } = useToast();
 
   async function searchImages() {
@@ -74,6 +106,27 @@ export function CardForm({ deckId }: { deckId: string }) {
     }
   }
 
+  async function searchAudios() {
+    if (!language) return;
+    const q = audioSearch.trim();
+    if (!q) return;
+    setAudioLoading(true);
+    setAudios([]);
+    setAudioSelected(null);
+    try {
+      const results = await searchCommonsAudio(q, language, 3);
+      setAudios(results.map(toThumb));
+    } catch (err) {
+      setAudios([]);
+      notify(
+        `Could not load audio: ${err instanceof Error ? err.message : String(err)}`,
+        'info'
+      );
+    } finally {
+      setAudioLoading(false);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const f = front.trim();
@@ -83,6 +136,7 @@ export function CardForm({ deckId }: { deckId: string }) {
       return;
     }
     const thumb = selected !== null ? thumbs[selected] : null;
+    const audio = audioSelected !== null ? audios[audioSelected] : null;
     const db = await getDb();
     const empty = createEmptyCard(new Date());
     const doc: CardDoc = fromFsrsCard(empty, {
@@ -92,6 +146,8 @@ export function CardForm({ deckId }: { deckId: string }) {
       back: b,
       image_url: thumb?.url ?? null,
       image_attribution: thumb?.attribution ?? null,
+      audio_url: audio?.url ?? null,
+      audio_attribution: audio?.attribution ?? null,
       createdAt: Date.now()
     });
     try {
@@ -101,6 +157,9 @@ export function CardForm({ deckId }: { deckId: string }) {
       setSearch('');
       setThumbs([]);
       setSelected(null);
+      setAudioSearch('');
+      setAudios([]);
+      setAudioSelected(null);
     } catch (err) {
       notify(`Could not save card: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -172,6 +231,55 @@ export function CardForm({ deckId }: { deckId: string }) {
         rows={2}
         className={`${inputClass} resize-y`}
       />
+      {language ? (
+        <>
+          <div className="flex gap-2">
+            <input
+              placeholder="Search audio"
+              value={audioSearch}
+              onChange={(e) => setAudioSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  searchAudios();
+                }
+              }}
+              className={inputClass}
+            />
+            <button type="button" onClick={searchAudios} className={btnPrimary}>
+              Search
+            </button>
+          </div>
+          {audioLoading ? (
+            <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-indigo-500" />
+            </div>
+          ) : null}
+          {!audioLoading && audios.length > 0 ? (
+            <div className="flex gap-2">
+              {audios.map((t, i) => (
+                <button
+                  key={t.url}
+                  type="button"
+                  onClick={() => setAudioSelected(audioSelected === i ? null : i)}
+                  onMouseEnter={() => playAudio(t.url)}
+                  className={`flex aspect-square flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 p-2 text-center transition ${
+                    audioSelected === i
+                      ? 'border-indigo-500 ring-2 ring-indigo-500/30'
+                      : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'
+                  }`}
+                >
+                  <Volume2 className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
+                  <span className="line-clamp-3 text-[0.65rem] leading-tight text-zinc-600 dark:text-zinc-300">
+                    {t.attribution}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : null}
       <div className="flex items-center gap-2 justify-self-start">
         <button type="submit" className={btnPrimary}>
           Add card
@@ -181,7 +289,13 @@ export function CardForm({ deckId }: { deckId: string }) {
   );
 }
 
-export function CardList({ deckId }: { deckId: string }) {
+export function CardList({
+  deckId,
+  language
+}: {
+  deckId: string;
+  language: Language | null;
+}) {
   const cards = useCards(deckId);
   return (
     <div className="space-y-4">
@@ -191,7 +305,7 @@ export function CardList({ deckId }: { deckId: string }) {
           ({cards.length})
         </span>
       </h3>
-      <CardForm deckId={deckId} />
+      <CardForm deckId={deckId} language={language} />
       {cards.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">
           No cards yet. Add one above.
@@ -211,8 +325,22 @@ export function CardList({ deckId }: { deckId: string }) {
                     className="h-12 w-12 shrink-0 rounded-lg object-cover"
                   />
                 ) : null}
-                <div className="font-semibold text-zinc-900 dark:text-zinc-100">
+                <div className="flex items-center gap-1.5 font-semibold text-zinc-900 dark:text-zinc-100">
                   {card.front}
+                  {card.audio_url ? (
+                    <button
+                      type="button"
+                      aria-label="Play audio"
+                      onMouseEnter={() => playAudio(card.audio_url)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playAudio(card.audio_url);
+                      }}
+                      className="text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
+                    >
+                      <Volume2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
                 </div>
                 <div className="text-sm text-zinc-500 dark:text-zinc-400">
                   {card.back}
@@ -266,15 +394,37 @@ export function DeckDetail() {
           {deck?.name ?? deckId.slice(0, 8)}
         </span>
       </nav>
-      <div>
-        <Link
-          to={`/deck/${deckId}/study`}
-          className={btnPrimary}
-        >
+      <div className="flex flex-wrap items-center gap-4">
+        <Link to={`/deck/${deckId}/study`} className={btnPrimary}>
           Study now
         </Link>
+        <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+          Language
+          <select
+            value={deck?.language?.qid ?? ''}
+            onChange={async (e) => {
+              const value = e.target.value;
+              const newLang: Language | null = value
+                ? LANG_BY_QID[value] ?? null
+                : null;
+              const db = await getDb();
+              const doc = await db.decks
+                .findOne({ selector: { id: deckId } })
+                .exec();
+              await doc?.patch({ language: newLang });
+            }}
+            className={inputClass}
+          >
+            <option value="">No language</option>
+            {LANGUAGES.map((l) => (
+              <option key={l.qid} value={l.qid}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-      <CardList deckId={deckId} />
+      <CardList deckId={deckId} language={deck?.language ?? null} />
     </div>
   );
 }

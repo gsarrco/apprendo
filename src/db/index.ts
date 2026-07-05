@@ -39,7 +39,15 @@ export function getDb(): Promise<AppDatabase> {
       ignoreDuplicate: true
     }).then(async (db: AppDatabase) => {
       await db.addCollections({
-        decks: { schema: deckSchema },
+        decks: {
+          schema: deckSchema,
+          migrationStrategies: {
+            1: (oldDoc: Record<string, unknown>) => ({
+              ...oldDoc,
+              language: null
+            })
+          }
+        },
         cards: {
           schema: cardSchema,
           migrationStrategies: {
@@ -47,6 +55,11 @@ export function getDb(): Promise<AppDatabase> {
               ...oldDoc,
               image_url: null,
               image_attribution: null
+            }),
+            2: (oldDoc: Record<string, unknown>) => ({
+              ...oldDoc,
+              audio_url: null,
+              audio_attribution: null
             })
           }
         },
