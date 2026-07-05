@@ -172,7 +172,6 @@ export function CardList({
                       key={a.url}
                       type="button"
                       aria-label="Play audio"
-                      onMouseEnter={() => playAudio(a.url)}
                       onClick={(e) => {
                         e.stopPropagation();
                         playAudio(a.url);

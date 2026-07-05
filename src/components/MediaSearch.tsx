@@ -5,7 +5,7 @@ import {
   searchCommonsAudio,
   type CommonsMedium
 } from '../integrations/commonsApi';
-import { toThumb, playAudio } from '../lib/commonsThumb';
+import { toThumb } from '../lib/commonsThumb';
 import type { AttachmentType, CardAttachment, Language } from '../types';
 import { AttachmentTray } from './AttachmentTray';
 import { btnPrimary, inputClass } from './ui';
@@ -103,7 +103,6 @@ export function MediaSearch({
                 key={t.url}
                 type="button"
                 onClick={() => toggle(t)}
-                onMouseEnter={type === 'audio' ? () => playAudio(t.url) : undefined}
                 className={`relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 p-2 text-center transition ${
                   isSelected
                     ? 'border-indigo-500 ring-2 ring-indigo-500/30'
