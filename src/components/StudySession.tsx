@@ -41,6 +41,7 @@ export function StudySession() {
   const [seenIds, setSeenIds] = useState<string[]>([]);
   const [showBack, setShowBack] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [playIndex, setPlayIndex] = useState(0);
   const { notify } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -52,19 +53,33 @@ export function StudySession() {
   const current = queue[0];
 
   useEffect(() => {
-    if (!showBack || current?.back_attachment?.type !== 'audio') return;
+    if (!showBack) {
+      setPlayIndex(0);
+      return;
+    }
+    const audios =
+      current?.back_attachments.filter((a) => a.type === 'audio') ?? [];
+    if (audios.length === 0) return;
+    if (playIndex >= audios.length) return;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
-    const audio = new Audio(current.back_attachment!.url);
+    const audio = new Audio(audios[playIndex].url);
     audioRef.current = audio;
+    audio.addEventListener('ended', () => {
+      if (playIndex + 1 < audios.length) setPlayIndex(playIndex + 1);
+    });
     void audio.play().catch(() => {});
     return () => {
       audio.pause();
       if (audioRef.current === audio) audioRef.current = null;
     };
-  }, [showBack, current?.id, current?.back_attachment]);
+  }, [showBack, current?.id, current?.back_attachments, playIndex]);
+
+  useEffect(() => {
+    setPlayIndex(0);
+  }, [current?.id]);
 
   const previews = useMemo(() => {
     if (!current) return {};
@@ -103,8 +118,8 @@ export function StudySession() {
       deckId: cardDoc.deckId,
       front: cardDoc.front,
       back: cardDoc.back,
-      front_attachment: cardDoc.front_attachment,
-      back_attachment: cardDoc.back_attachment,
+      front_attachments: cardDoc.front_attachments,
+      back_attachments: cardDoc.back_attachments,
       createdAt: cardDoc.createdAt
     });
     try {
@@ -190,12 +205,25 @@ export function StudySession() {
         >
           {STATE_LABELS[current.state] ?? current.state}
         </span>
-        {current.front_attachment?.type === 'image' ? (
-          <img
-            src={current.front_attachment.url}
-            alt=""
-            className="max-h-[200px] w-full rounded-xl object-contain"
-          />
+        {current.front_attachments.filter((a) => a.type === 'image').length > 0 ? (
+          <div
+            className={`grid gap-2 ${
+              current.front_attachments.filter((a) => a.type === 'image').length >= 3
+                ? 'grid-cols-3'
+                : 'grid-cols-2'
+            }`}
+          >
+            {current.front_attachments
+              .filter((a) => a.type === 'image')
+              .map((a) => (
+                <img
+                  key={a.url}
+                  src={a.url}
+                  alt=""
+                  className="max-h-[200px] w-full rounded-xl object-contain"
+                />
+              ))}
+          </div>
         ) : null}
         <div className="text-xl font-semibold leading-relaxed whitespace-pre-wrap">
           {current.front}
@@ -207,36 +235,41 @@ export function StudySession() {
               <div className="text-lg leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
                 {current.back}
               </div>
-              {current.back_attachment?.type === 'audio' ? (
-                <button
-                  type="button"
-                  aria-label="Replay audio"
-                  onClick={() => {
-                    if (audioRef.current) {
-                      audioRef.current.pause();
-                      audioRef.current = null;
-                    }
-                    if (current.back_attachment?.type !== 'audio') return;
-                    const audio = new Audio(current.back_attachment.url);
-                    audioRef.current = audio;
-                    void audio.play().catch(() => {});
-                  }}
-                  className="mt-1 text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
-                >
-                  <Volume2 className="h-5 w-5" aria-hidden="true" />
-                </button>
-              ) : null}
+              <div className="mt-1 flex flex-wrap gap-2">
+                {current.back_attachments
+                  .filter((a) => a.type === 'audio')
+                  .map((a, i) => (
+                    <button
+                      key={a.url}
+                      type="button"
+                      aria-label={`Replay audio ${i + 1}`}
+                      onClick={() => setPlayIndex(i)}
+                      className="text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
+                    >
+                      <Volume2 className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  ))}
+              </div>
             </div>
           </>
         ) : null}
-        {current.front_attachment?.attribution ? (
-          <div className="mt-auto text-[0.65rem] text-zinc-400 dark:text-zinc-500">
-            {current.front_attachment.attribution}
+        {current.front_attachments.some((a) => a.attribution) ? (
+          <div className="mt-auto space-y-0.5 text-[0.65rem] text-zinc-400 dark:text-zinc-500">
+            {current.front_attachments
+              .filter((a) => a.type === 'image' && a.attribution)
+              .map((a) => (
+                <div key={a.url}>{a.attribution}</div>
+              ))}
           </div>
         ) : null}
-        {showBack && current.back_attachment?.attribution ? (
-          <div className="text-[0.65rem] text-zinc-400 dark:text-zinc-500">
-            {current.back_attachment.attribution}
+        {showBack &&
+        current.back_attachments.some((a) => a.attribution) ? (
+          <div className="space-y-0.5 text-[0.65rem] text-zinc-400 dark:text-zinc-500">
+            {current.back_attachments
+              .filter((a) => a.type === 'audio' && a.attribution)
+              .map((a) => (
+                <div key={a.url}>{a.attribution}</div>
+              ))}
           </div>
         ) : null}
       </div>

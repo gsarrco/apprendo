@@ -27,8 +27,8 @@ export interface CardDoc {
   deckId: string;
   front: string;
   back: string;
-  front_attachment: CardAttachment | null;
-  back_attachment: CardAttachment | null;
+  front_attachments: CardAttachment[];
+  back_attachments: CardAttachment[];
 
   due: string;
   stability: number;

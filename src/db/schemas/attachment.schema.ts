@@ -1,5 +1,5 @@
-export const attachmentProperty = {
-  type: ['object', 'null'],
+export const attachmentItemProperty = {
+  type: 'object',
   properties: {
     type: { type: 'string', enum: ['image', 'audio'] },
     url: { type: 'string' },
@@ -7,4 +7,9 @@ export const attachmentProperty = {
     createdAt: { type: 'number' }
   },
   required: ['type', 'url', 'attribution', 'createdAt']
+} as const;
+
+export const attachmentListProperty = {
+  type: 'array',
+  items: attachmentItemProperty
 } as const;

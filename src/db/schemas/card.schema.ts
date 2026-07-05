@@ -1,7 +1,7 @@
-import { attachmentProperty } from './attachment.schema';
+import { attachmentListProperty } from './attachment.schema';
 
 export const cardSchema = {
-  version: 3,
+  version: 4,
   primaryKey: 'id',
   type: 'object',
   properties: {
@@ -9,8 +9,8 @@ export const cardSchema = {
     deckId: { type: 'string', maxLength: 100 },
     front: { type: 'string' },
     back: { type: 'string' },
-    front_attachment: attachmentProperty,
-    back_attachment: attachmentProperty,
+    front_attachments: attachmentListProperty,
+    back_attachments: attachmentListProperty,
     due: { type: 'string', maxLength: 40 },
     stability: { type: 'number' },
     difficulty: { type: 'number' },
@@ -29,6 +29,8 @@ export const cardSchema = {
     'deckId',
     'front',
     'back',
+    'front_attachments',
+    'back_attachments',
     'due',
     'stability',
     'difficulty',

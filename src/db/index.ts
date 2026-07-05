@@ -93,6 +93,18 @@ export function getDb(): Promise<AppDatabase> {
                   'audio'
                 )
               };
+            },
+            4: (old: Record<string, unknown>) => {
+              const toList = (single: unknown): CardAttachment[] =>
+                single ? [single as CardAttachment] : [];
+              const rest = { ...old };
+              delete rest.front_attachment;
+              delete rest.back_attachment;
+              return {
+                ...rest,
+                front_attachments: toList(old.front_attachment),
+                back_attachments: toList(old.back_attachment)
+              };
             }
           }
         },
