@@ -25,7 +25,7 @@ describe("searchCommonsAudio", () => {
         const caption = captionFromTitle(r.title, "audio");
         expect(caption.length).toBeGreaterThan(0);
         expect(caption).not.toMatch(/^LL-Q/);
-        expect(caption).not.toMatch(/-/);
+        expect(caption).not.toMatch(/^\d+$/);
         expect(caption).not.toMatch(/\.wav$/);
         expect(caption).not.toMatch(/\.ogg$/);
       }

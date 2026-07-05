@@ -15,7 +15,7 @@ export function stripHtml(s: string): string {
 export function captionFromTitle(title: string, type: AttachmentType): string {
   let s = title.replace(/^File:/, '').replace(/_/g, ' ').trim();
   s = s.replace(/\.[^.]+$/, '').trim();
-  if (type === 'audio') {
+  if (type === 'audio' && s.startsWith('LL-Q')) {
     return s.split('-').pop() ?? s;
   }
   return s;
