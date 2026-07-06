@@ -1,6 +1,8 @@
 import { Link, Outlet } from 'react-router-dom';
 import { useDecks } from '../hooks/useDecks';
 import { DeckForm, DeckList } from './DeckList';
+import { InstallButton } from './InstallButton';
+import { IosInstallHint } from './IosInstallHint';
 import { ThemeToggle } from './ThemeToggle';
 
 export function DeckIndex() {
@@ -30,12 +32,16 @@ export function Layout() {
           >
             Apprendo
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <InstallButton />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-5 py-10">
         <Outlet />
       </main>
+      <IosInstallHint />
     </div>
   );
 }
