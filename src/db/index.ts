@@ -36,7 +36,7 @@ export function getDb(): Promise<AppDatabase> {
     dbPromise = createRxDatabase<AppCollections>({
       name: 'apprendodb',
       storage: wrappedValidateAjvStorage({ storage: getRxStorageDexie() }),
-      ignoreDuplicate: true
+      ignoreDuplicate: import.meta.env.DEV
     }).then(async (db: AppDatabase) => {
       await db.addCollections({
         decks: {
@@ -126,6 +126,9 @@ export function getDb(): Promise<AppDatabase> {
         reviewlogs: { schema: reviewLogSchema }
       });
       return db;
+    });
+    dbPromise.catch(() => {
+      dbPromise = null;
     });
   }
   return dbPromise as Promise<AppDatabase>;

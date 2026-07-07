@@ -20,7 +20,6 @@ export function DeckForm() {
     const language: Language | null = languageQid
       ? LANG_BY_QID[languageQid] ?? null
       : null;
-    const db = await getDb();
     const deck: Deck = {
       id: nanoid(),
       name: trimmed,
@@ -28,6 +27,7 @@ export function DeckForm() {
       createdAt: Date.now()
     };
     try {
+      const db = await getDb();
       await db.decks.insert(deck);
       setName('');
       setLanguageQid('');
