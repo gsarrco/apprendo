@@ -3,8 +3,10 @@
 ## Tech stack
 
 Vite + React 19 + TypeScript. Styling is **Tailwind CSS v4** (via the
-`@tailwindcss/vite` plugin in `vite.config.ts`). Linting with oxlint.
-Data layer: RxDB + RxJS; spaced repetition via `ts-fsrs`.
+`@tailwindcss/vite` plugin in `vite.config.ts`), with **Flowbite React**
+available for prebuilt components (via the `flowbiteReact()` Vite plugin;
+import components with `import { Button } from 'flowbite-react'`). Linting
+with oxlint. Data layer: RxDB + RxJS; spaced repetition via `ts-fsrs`.
 
 ## Required checks
 
@@ -29,6 +31,8 @@ If wiring up the dev server to sanity-check, start and stop it
 - Color palette: indigo accent + zinc neutrals. State colors:
   amber (learning), emerald (review/ok), red (relearning/again).
 - Do not add comments unless explicitly requested.
+- `.flowbite-react/class-list.json` is generated (scanned by Tailwind's
+  `@source` in `src/styles.css`) — do not hand-edit it.
 
 ## Icons
 
