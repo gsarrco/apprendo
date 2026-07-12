@@ -7,10 +7,67 @@ import { getDb } from '../db';
 import { scheduler } from '../fsrs/scheduler';
 import { toFsrsCard, fromFsrsCard, fromFsrsLog } from '../fsrs/mappers';
 import { useDueCards } from '../hooks/useDueCards';
-import type { CardDoc } from '../types';
+import type { CardAttachment, CardDoc } from '../types';
 import { RatingButtons } from './RatingButtons';
 import { btnPrimary, btnSecondary } from './ui';
 import { useToast } from '../hooks/useToast';
+
+function ImageGrid({ attachments }: { attachments: CardAttachment[] }) {
+  const images = attachments.filter((a) => a.type === 'image');
+  if (images.length === 0) return null;
+  return (
+    <div
+      className={`grid gap-2 ${images.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
+    >
+      {images.map((a) => (
+        <img
+          key={a.url}
+          src={a.url}
+          alt=""
+          className="max-h-[200px] w-full rounded-xl object-contain"
+        />
+      ))}
+    </div>
+  );
+}
+
+function AudioButtons({
+  attachments,
+  onPlay
+}: {
+  attachments: CardAttachment[];
+  onPlay: (index: number) => void;
+}) {
+  const audio = attachments.filter((a) => a.type === 'audio');
+  if (audio.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-2">
+      {audio.map((a, i) => (
+        <button
+          key={a.url}
+          type="button"
+          aria-label={`Play audio ${i + 1}`}
+          onClick={() => onPlay(i)}
+          className="text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
+        >
+          <Volume2 className="h-5 w-5" aria-hidden="true" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Attributions({ attachments }: { attachments: CardAttachment[] }) {
+  const withAttr = attachments.filter((a) => a.attribution);
+  if (withAttr.length === 0) return null;
+  return (
+    <div className="space-y-0.5 text-[0.65rem] text-zinc-400 dark:text-zinc-500">
+      {withAttr.map((a) => (
+        <div key={a.url}>{a.attribution}</div>
+      ))}
+    </div>
+  );
+}
 
 function formatInterval(ms: number): string {
   if (ms < 60_000) return `${Math.max(1, Math.round(ms / 1000))}s`;
@@ -53,12 +110,9 @@ export function StudySession() {
   const current = queue[0];
 
   useEffect(() => {
-    if (!showBack) {
-      setPlayIndex(0);
-      return;
-    }
-    const audios =
-      current?.back_attachments.filter((a) => a.type === 'audio') ?? [];
+    const audios = showBack
+      ? current?.back_attachments.filter((a) => a.type === 'audio') ?? []
+      : current?.front_attachments.filter((a) => a.type === 'audio') ?? [];
     if (audios.length === 0) return;
     if (playIndex >= audios.length) return;
     if (audioRef.current) {
@@ -75,11 +129,11 @@ export function StudySession() {
       audio.pause();
       if (audioRef.current === audio) audioRef.current = null;
     };
-  }, [showBack, current?.id, current?.back_attachments, playIndex]);
+  }, [showBack, current?.id, current?.front_attachments, current?.back_attachments, playIndex]);
 
   useEffect(() => {
     setPlayIndex(0);
-  }, [current?.id]);
+  }, [current?.id, showBack]);
 
   const previews = useMemo(() => {
     if (!current) return {};
@@ -205,72 +259,35 @@ export function StudySession() {
         >
           {STATE_LABELS[current.state] ?? current.state}
         </span>
-        {current.front_attachments.filter((a) => a.type === 'image').length > 0 ? (
-          <div
-            className={`grid gap-2 ${
-              current.front_attachments.filter((a) => a.type === 'image').length >= 3
-                ? 'grid-cols-3'
-                : 'grid-cols-2'
-            }`}
-          >
-            {current.front_attachments
-              .filter((a) => a.type === 'image')
-              .map((a) => (
-                <img
-                  key={a.url}
-                  src={a.url}
-                  alt=""
-                  className="max-h-[200px] w-full rounded-xl object-contain"
-                />
-              ))}
+        <ImageGrid attachments={current.front_attachments} />
+        <div className="flex items-start gap-2">
+          <div className="text-xl font-semibold leading-relaxed whitespace-pre-wrap">
+            {current.front}
           </div>
-        ) : null}
-        <div className="text-xl font-semibold leading-relaxed whitespace-pre-wrap">
-          {current.front}
+          <AudioButtons
+            attachments={current.front_attachments}
+            onPlay={(i) => {
+              if (showBack) return;
+              setPlayIndex(i);
+            }}
+          />
         </div>
+        <Attributions attachments={current.front_attachments} />
         {showBack ? (
           <>
             <hr className="border-zinc-200 dark:border-zinc-800" />
+            <ImageGrid attachments={current.back_attachments} />
             <div className="flex items-start gap-2">
               <div className="text-lg leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
                 {current.back}
               </div>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {current.back_attachments
-                  .filter((a) => a.type === 'audio')
-                  .map((a, i) => (
-                    <button
-                      key={a.url}
-                      type="button"
-                      aria-label={`Replay audio ${i + 1}`}
-                      onClick={() => setPlayIndex(i)}
-                      className="text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
-                    >
-                      <Volume2 className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                  ))}
-              </div>
+              <AudioButtons
+                attachments={current.back_attachments}
+                onPlay={setPlayIndex}
+              />
             </div>
+            <Attributions attachments={current.back_attachments} />
           </>
-        ) : null}
-        {current.front_attachments.some((a) => a.attribution) ? (
-          <div className="mt-auto space-y-0.5 text-[0.65rem] text-zinc-400 dark:text-zinc-500">
-            {current.front_attachments
-              .filter((a) => a.type === 'image' && a.attribution)
-              .map((a) => (
-                <div key={a.url}>{a.attribution}</div>
-              ))}
-          </div>
-        ) : null}
-        {showBack &&
-        current.back_attachments.some((a) => a.attribution) ? (
-          <div className="space-y-0.5 text-[0.65rem] text-zinc-400 dark:text-zinc-500">
-            {current.back_attachments
-              .filter((a) => a.type === 'audio' && a.attribution)
-              .map((a) => (
-                <div key={a.url}>{a.attribution}</div>
-              ))}
-          </div>
         ) : null}
       </div>
 
