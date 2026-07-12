@@ -3,6 +3,7 @@ import { Layout, DeckIndex } from './components/AppLayout';
 import { DeckDetail } from './components/CardList';
 import { StudySession } from './components/StudySession';
 import { ToastProvider } from './components/Toast';
+import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 
 const router = createBrowserRouter([
   {
@@ -20,6 +21,7 @@ const router = createBrowserRouter([
 export default function App() {
   return (
     <ToastProvider>
+      <PwaUpdatePrompt />
       <RouterProvider router={router} />
     </ToastProvider>
   );
