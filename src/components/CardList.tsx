@@ -1,19 +1,14 @@
 import { Link, useParams } from 'react-router-dom';
-import { nanoid } from 'nanoid';
-import { useState } from 'react';
 import { getDb } from '../db';
-import { createEmptyCard } from '../fsrs/scheduler';
-import { fromFsrsCard } from '../fsrs/mappers';
-import type { CardAttachment, CardDoc, Language } from '../types';
+import type { CardAttachment, Language } from '../types';
 import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
 import { useCards } from '../hooks/useCards';
 import { useDeck } from '../hooks/useDecks';
 import { btnPrimary, inputClass } from './ui';
 import { Volume2 } from 'lucide-react';
-import { useToast } from '../hooks/useToast';
 import { DeleteButton } from './DeleteButton';
-import { MediaSearch } from './MediaSearch';
 import { playAudio } from '../lib/commonsThumb';
+import { CardForm } from './AddCard';
 
 const STATE_LABELS = ['New', 'Learning', 'Review', 'Relearning'];
 
@@ -24,96 +19,45 @@ const STATE_STYLES: Record<number, string> = {
   3: 'border-red-400/60 text-red-500'
 };
 
-export function CardForm({
-  deckId,
-  language
-}: {
-  deckId: string;
-  language: Language | null;
-}) {
-  const [front, setFront] = useState('');
-  const [back, setBack] = useState('');
-  const [frontAttachments, setFrontAttachments] = useState<CardAttachment[]>([]);
-  const [backAttachments, setBackAttachments] = useState<CardAttachment[]>([]);
-  const { notify } = useToast();
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const f = front.trim();
-    const b = back.trim();
-    if (!b) {
-      notify('Back is required', 'info');
-      return;
-    }
-    const db = await getDb();
-    const empty = createEmptyCard(new Date());
-    const doc: CardDoc = fromFsrsCard(empty, {
-      id: nanoid(),
-      deckId,
-      front: f,
-      back: b,
-      front_attachments: frontAttachments,
-      back_attachments: backAttachments,
-      createdAt: Date.now()
-    });
-    try {
-      await db.cards.insert(doc);
-      setFront('');
-      setBack('');
-      setFrontAttachments([]);
-      setBackAttachments([]);
-    } catch (err) {
-      notify(`Could not save card: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-
+function Thumbnails({ attachments }: { attachments: CardAttachment[] }) {
+  const images = attachments.filter((a) => a.type === 'image');
+  if (images.length === 0) return null;
   return (
-    <form className="grid gap-3" onSubmit={submit}>
-      <section className="grid gap-2">
-        <h2 className="text-sm font-semibold leading-6 text-zinc-900 dark:text-zinc-100">
-          Front
-        </h2>
-        <MediaSearch
-          type="image"
-          language={null}
-          selected={frontAttachments}
-          onChange={setFrontAttachments}
+    <div className="grid w-fit grid-cols-2 gap-1">
+      {images.slice(0, 4).map((a) => (
+        <img
+          key={a.url}
+          src={a.url}
+          alt=""
+          className="h-12 w-12 rounded-lg object-cover"
         />
-        <textarea
-          placeholder="Front"
-          value={front}
-          onChange={(e) => setFront(e.target.value)}
-          rows={2}
-          className={`${inputClass} resize-y`}
-        />
-      </section>
-      <section className="grid gap-2">
-        <h2 className="text-sm font-semibold leading-6 text-zinc-900 dark:text-zinc-100">
-          Back
-        </h2>
-        <textarea
-          placeholder="Back"
-          value={back}
-          onChange={(e) => setBack(e.target.value)}
-          rows={2}
-          className={`${inputClass} resize-y`}
-        />
-        {language ? (
-          <MediaSearch
-            type="audio"
-            language={language}
-            selected={backAttachments}
-            onChange={setBackAttachments}
-          />
-        ) : null}
-      </section>
-      <div className="flex items-center gap-2 justify-self-start">
-        <button type="submit" className={btnPrimary}>
-          Add card
-        </button>
-      </div>
-    </form>
+      ))}
+      {images.length > 4 ? (
+        <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+          +{images.length - 4}
+        </span>
+      ) : null}
+    </div>
   );
+}
+
+function AudioButtons({ attachments }: { attachments: CardAttachment[] }) {
+  const audio = attachments.filter((a) => a.type === 'audio');
+  if (audio.length === 0) return null;
+  return audio.map((a) => (
+    <button
+      key={a.url}
+      type="button"
+      aria-label="Play audio"
+      onClick={(e) => {
+        e.stopPropagation();
+        playAudio(a.url);
+      }}
+      className="text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
+    >
+      <Volume2 className="h-4 w-4" aria-hidden="true" />
+    </button>
+  ));
 }
 
 export function CardList({
@@ -145,45 +89,15 @@ export function CardList({
               className="flex items-start justify-between gap-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
             >
               <div className="grid flex-1 gap-0.5">
-                {card.front_attachments.filter((a) => a.type === 'image').length > 0 ? (
-                  <div className="grid w-fit grid-cols-2 gap-1">
-                    {card.front_attachments
-                      .filter((a) => a.type === 'image')
-                      .slice(0, 4)
-                      .map((a) => (
-                        <img
-                          key={a.url}
-                          src={a.url}
-                          alt=""
-                          className="h-12 w-12 rounded-lg object-cover"
-                        />
-                      ))}
-                    {card.front_attachments.filter((a) => a.type === 'image').length > 4 ? (
-                      <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                        +{card.front_attachments.filter((a) => a.type === 'image').length - 4}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
+                <Thumbnails attachments={card.front_attachments} />
                 <div className="flex items-center gap-1.5 font-semibold text-zinc-900 dark:text-zinc-100">
                   {card.front}
-                  {card.back_attachments.filter((a) => a.type === 'audio').map((a) => (
-                    <button
-                      key={a.url}
-                      type="button"
-                      aria-label="Play audio"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        playAudio(a.url);
-                      }}
-                      className="text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
-                    >
-                      <Volume2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  ))}
+                  <AudioButtons attachments={card.front_attachments} />
                 </div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {card.back}
+                <Thumbnails attachments={card.back_attachments} />
+                <div className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+                  <span>{card.back}</span>
+                  <AudioButtons attachments={card.back_attachments} />
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">

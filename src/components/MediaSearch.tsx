@@ -10,20 +10,22 @@ import type { AttachmentType, CardAttachment, Language } from '../types';
 import { AttachmentTray } from './AttachmentTray';
 import { btnPrimary, inputClass } from './ui';
 import { useToast } from '../hooks/useToast';
+import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
 
 interface MediaSearchProps {
   type: AttachmentType;
-  language: Language | null;
+  defaultLanguage: Language | null;
   selected: CardAttachment[];
   onChange: (next: CardAttachment[]) => void;
 }
 
 export function MediaSearch({
   type,
-  language,
+  defaultLanguage,
   selected,
   onChange
 }: MediaSearchProps) {
+  const [language, setLanguage] = useState<Language | null>(defaultLanguage);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<CommonsMedium[]>([]);
@@ -73,10 +75,25 @@ export function MediaSearch({
 
   return (
     <div className="grid gap-2">
+      {type === 'audio' ? (
+        <select
+          value={language?.qid ?? ''}
+          onChange={(e) =>
+            setLanguage(e.target.value ? LANG_BY_QID[e.target.value] ?? null : null)
+          }
+          className={inputClass}
+        >
+          <option value="">No language</option>
+          {LANGUAGES.map((l) => (
+            <option key={l.qid} value={l.qid}>{l.label}</option>
+          ))}
+        </select>
+      ) : null}
       <div className="flex gap-2">
         <input
           placeholder={`Search ${type}`}
           value={query}
+          disabled={type === 'audio' && !language}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -85,9 +102,14 @@ export function MediaSearch({
               runSearch();
             }
           }}
-          className={inputClass}
+          className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-50`}
         />
-        <button type="button" onClick={runSearch} className={btnPrimary}>
+        <button
+          type="button"
+          onClick={runSearch}
+          disabled={type === 'audio' && !language}
+          className={`${btnPrimary} disabled:cursor-not-allowed disabled:opacity-50`}
+        >
           Search
         </button>
       </div>
