@@ -27,3 +27,8 @@ blob-report
 *.njsproj
 *.sln
 *.sw?
+
+# Docs (keep only README and AGENTS)
+*.md
+!README.md
+!AGENTS.md
