@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getDb } from '../db';
 import type { CardAttachment, CardDoc, Language } from '../types';
@@ -6,7 +6,7 @@ import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
 import { useCards } from '../hooks/useCards';
 import { useDeck } from '../hooks/useDecks';
 import { btnPrimary, inputClass } from './ui';
-import { Volume2 } from 'lucide-react';
+import { Check, Volume2 } from 'lucide-react';
 import { DeleteButton } from './DeleteButton';
 import { playAudio } from '../lib/commonsThumb';
 import { CardForm } from './AddEditCard';
@@ -153,20 +153,79 @@ export function CardList({
 export function DeckDetail() {
   const { deckId } = useParams();
   const deck = useDeck(deckId ?? '');
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingName) {
+      setNameValue(deck?.name ?? '');
+      inputRef.current?.focus();
+    }
+  }, [editingName, deck?.name]);
+
   if (!deckId) return <p>Missing deck.</p>;
+
+  async function saveName() {
+    const trimmed = nameValue.trim();
+    if (!trimmed || !deck) {
+      setEditingName(false);
+      return;
+    }
+    const db = await getDb();
+    const doc = await db.decks
+      .findOne({ selector: { id: deckId } })
+      .exec();
+    if (doc && trimmed !== deck.name) {
+      await doc.patch({ name: trimmed });
+    }
+    setEditingName(false);
+  }
+
   return (
     <div className="space-y-6">
       <nav className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
         <Link
           to="/"
+          onClick={(e) => {
+            if (editingName) e.preventDefault();
+          }}
           className="transition hover:text-indigo-600 dark:hover:text-indigo-400"
         >
           Decks
         </Link>
         <span className="text-zinc-300 dark:text-zinc-600">/</span>
-        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-          {deck?.name ?? deckId.slice(0, 8)}
-        </span>
+        {editingName ? (
+          <div className="flex items-center gap-1">
+            <input
+              ref={inputRef}
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveName();
+                if (e.key === 'Escape') setEditingName(false);
+              }}
+              className={`${inputClass} py-1`}
+            />
+            <button
+              type="button"
+              aria-label="Save name"
+              onClick={saveName}
+              className="text-zinc-400 transition hover:text-emerald-600 dark:hover:text-emerald-400"
+            >
+              <Check className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            title="Edit deck name"
+            onClick={() => setEditingName(true)}
+            className="rounded font-medium text-zinc-700 transition hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
+          >
+            {deck?.name ?? deckId.slice(0, 8)}
+          </button>
+        )}
       </nav>
       <div className="flex flex-wrap items-center gap-4">
         <Link to={`/deck/${deckId}/study`} className={btnPrimary}>
