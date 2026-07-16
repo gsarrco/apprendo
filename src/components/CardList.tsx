@@ -1,6 +1,7 @@
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getDb } from '../db';
-import type { CardAttachment, Language } from '../types';
+import type { CardAttachment, CardDoc, Language } from '../types';
 import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
 import { useCards } from '../hooks/useCards';
 import { useDeck } from '../hooks/useDecks';
@@ -8,7 +9,7 @@ import { btnPrimary, inputClass } from './ui';
 import { Volume2 } from 'lucide-react';
 import { DeleteButton } from './DeleteButton';
 import { playAudio } from '../lib/commonsThumb';
-import { CardForm } from './AddCard';
+import { CardForm } from './AddEditCard';
 
 const STATE_LABELS = ['New', 'Learning', 'Review', 'Relearning'];
 
@@ -29,6 +30,7 @@ function Thumbnails({ attachments }: { attachments: CardAttachment[] }) {
           key={a.url}
           src={a.url}
           alt=""
+          onClick={(e) => e.stopPropagation()}
           className="h-12 w-12 rounded-lg object-cover"
         />
       ))}
@@ -68,15 +70,24 @@ export function CardList({
   language: Language | null;
 }) {
   const cards = useCards(deckId);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const editingCard: CardDoc | null = useMemo(
+    () => cards.find((c) => c.id === editingCardId) ?? null,
+    [cards, editingCardId]
+  );
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-        Cards{' '}
-        <span className="text-zinc-400 dark:text-zinc-500">
-          ({cards.length})
-        </span>
-      </h3>
-      <CardForm deckId={deckId} language={language} />
+      {editingCard ? (
+        <h3 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+          {`Edit card #${editingCard.id.slice(-4)}`}
+        </h3>
+      ) : null}
+      <CardForm
+        deckId={deckId}
+        language={language}
+        editingCard={editingCard}
+        onDone={() => setEditingCardId(null)}
+      />
       {cards.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">
           No cards yet. Add one above.
@@ -86,7 +97,12 @@ export function CardList({
           {cards.map((card) => (
             <li
               key={card.id}
-              className="flex items-start justify-between gap-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+              onClick={() => setEditingCardId(card.id)}
+              className={`flex cursor-pointer items-start justify-between gap-4 rounded-xl border bg-white px-4 py-3 shadow-sm transition dark:bg-zinc-900 ${
+                editingCardId === card.id
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/30'
+                  : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700'
+              }`}
             >
               <div className="grid flex-1 gap-0.5">
                 <Thumbnails attachments={card.front_attachments} />
@@ -100,7 +116,10 @@ export function CardList({
                   <AudioButtons attachments={card.back_attachments} />
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div
+                className="flex shrink-0 items-center gap-2"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex flex-col items-end gap-1 text-xs text-zinc-400 dark:text-zinc-500">
                   <span
                     className={`rounded-full border px-2 py-0.5 text-[0.7rem] capitalize ${STATE_STYLES[card.state] ?? STATE_STYLES[0]}`}
@@ -119,6 +138,7 @@ export function CardList({
                       .findOne({ selector: { id: card.id } })
                       .exec();
                     await doc?.remove();
+                    if (editingCardId === card.id) setEditingCardId(null);
                   }}
                 />
               </div>

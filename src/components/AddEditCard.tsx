@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { nanoid } from 'nanoid';
 import { getDb } from '../db';
 import { createEmptyCard } from '../fsrs/scheduler';
@@ -6,7 +6,7 @@ import { fromFsrsCard } from '../fsrs/mappers';
 import type { CardAttachment, CardDoc, Language } from '../types';
 import { useToast } from '../hooks/useToast';
 import { MediaSearch } from './MediaSearch';
-import { btnPrimary, inputClass } from './ui';
+import { btnPrimary, btnSecondary, inputClass } from './ui';
 import { TextAlignStart, AudioLines, Image as ImageIcon } from 'lucide-react';
 
 type SideTab = 'text' | 'pronunciation' | 'image';
@@ -105,16 +105,37 @@ function CardSideEditor({
 
 export function CardForm({
   deckId,
-  language
+  language,
+  editingCard,
+  onDone
 }: {
   deckId: string;
   language: Language | null;
+  editingCard?: CardDoc | null;
+  onDone?: () => void;
 }) {
+  const isEditing = Boolean(editingCard);
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
   const [frontAttachments, setFrontAttachments] = useState<CardAttachment[]>([]);
   const [backAttachments, setBackAttachments] = useState<CardAttachment[]>([]);
   const { notify } = useToast();
+
+  useEffect(() => {
+    if (editingCard) {
+      setFront(editingCard.front);
+      setBack(editingCard.back);
+      setFrontAttachments(editingCard.front_attachments);
+      setBackAttachments(editingCard.back_attachments);
+    }
+  }, [editingCard]);
+
+  function resetForm() {
+    setFront('');
+    setBack('');
+    setFrontAttachments([]);
+    setBackAttachments([]);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -134,24 +155,38 @@ export function CardForm({
       return;
     }
     const db = await getDb();
-    const empty = createEmptyCard(new Date());
-    const doc: CardDoc = fromFsrsCard(empty, {
-      id: nanoid(),
-      deckId,
-      front: f,
-      back: b,
-      front_attachments: frontAttachments,
-      back_attachments: backAttachments,
-      createdAt: Date.now()
-    });
     try {
-      await db.cards.insert(doc);
-      setFront('');
-      setBack('');
-      setFrontAttachments([]);
-      setBackAttachments([]);
+      if (editingCard) {
+        const rxDoc = await db.cards.findOne(editingCard.id).exec();
+        if (!rxDoc) throw new Error('Card no longer exists');
+        await rxDoc.patch({
+          front: f,
+          back: b,
+          front_attachments: frontAttachments,
+          back_attachments: backAttachments,
+          updatedAt: Date.now()
+        });
+        onDone?.();
+      } else {
+        const empty = createEmptyCard(new Date());
+        const doc: CardDoc = fromFsrsCard(empty, {
+          id: nanoid(),
+          deckId,
+          front: f,
+          back: b,
+          front_attachments: frontAttachments,
+          back_attachments: backAttachments,
+          createdAt: Date.now()
+        });
+        await db.cards.insert(doc);
+        resetForm();
+      }
     } catch (err) {
-      notify(`Could not save card: ${err instanceof Error ? err.message : String(err)}`);
+      notify(
+        `Could not ${isEditing ? 'edit' : 'save'} card: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
     }
   }
 
@@ -175,8 +210,20 @@ export function CardForm({
       />
       <div className="flex items-center gap-2 justify-self-start">
         <button type="submit" className={btnPrimary}>
-          Add card
+          {isEditing ? 'Edit card' : 'Add card'}
         </button>
+        {isEditing ? (
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              onDone?.();
+            }}
+            className={btnSecondary}
+          >
+            Cancel
+          </button>
+        ) : null}
       </div>
     </form>
   );
