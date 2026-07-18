@@ -1,32 +1,75 @@
-# React + TypeScript + Vite
+# Apprendo
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Apprendo is an offline-first language-learning flashcard app. It pulls
+images and native-speaker pronunciation straight from Wikimedia Commons
+to build the front and back of your cards, schedules reviews with
+spaced repetition, and lets you study multiple decks in a single
+session.
 
-Currently, two official plugins are available:
+<p>
+  <a href="https://apprendo.study">
+    <img alt="apprendo.study" src="https://img.shields.io/website?url=https%3A%2F%2Fapprendo.study&up_message=Open%20Apprendo&up_color=4f46e5&down_message=Site%20down&down_color=red&style=for-the-badge">
+  </a>
+</p>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- 🖼️ **Auto-illustrated cards** — fetches images and audio pronunciation
+  from Wikimedia Commons.
+- 📴 **Fully offline** — installable as a PWA, data lives locally via
+  RxDB.
+- 🧠 **FSRS scheduling** — reviews are timed by [FSRS](https://github.com/open-spaced-repetition/ts-fsrs)
+  (Free Spaced Repetition Scheduler), a modern algorithm that models
+  each card's difficulty and memory stability to predict the exact
+  moment you're about to forget it. It's the same algorithm available
+  as an official (opt-in) scheduler option in Anki.
+- 📚 **Multi-deck sessions** — study several decks together in one
+  sitting.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Architecture
 
-## Expanding the Oxlint configuration
+- **Stack**: [Vite](https://vitejs.dev) + React 19 + TypeScript.
+- **Styling**: Tailwind CSS v4 (via `@tailwindcss/vite`), with
+  [Flowbite React](https://flowbite-react.com) for prebuilt components
+  and [`lucide-react`](https://lucide.dev) for icons.
+- **Data layer**: [RxDB](https://rxdb.info) + RxJS for local-first,
+  reactive storage.
+- **Scheduling**: [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs)
+  implements the FSRS spaced-repetition algorithm.
+- **Linting**: [oxlint](https://oxc.rs/docs/guide/usage/linter.html).
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Project layout:
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```
+src/components/    UI components (one feature per file)
+src/hooks/         React hooks; data hooks subscribe to RxDB via RxJS
+src/db/            RxDB database setup (getDb() is the async entry point)
+src/fsrs/          Scheduler + mappers for ts-fsrs
+src/integrations/  Wikimedia Commons API client and language data
+src/lib/           Small shared utilities (e.g. Commons thumbnail URLs)
+src/types.ts       Shared document types (Deck, CardDoc)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Getting started
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the app in development mode:
+
+```bash
+npm run dev
+```
+
+The dev server serves the app at http://localhost:5173.
+
+## Building
+
+Create a production build:
+
+```bash
+npm run build
+```
