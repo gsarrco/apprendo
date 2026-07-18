@@ -119,6 +119,7 @@ export function CardForm({
   const [back, setBack] = useState('');
   const [frontAttachments, setFrontAttachments] = useState<CardAttachment[]>([]);
   const [backAttachments, setBackAttachments] = useState<CardAttachment[]>([]);
+  const [formKey, setFormKey] = useState(0);
   const { notify } = useToast();
 
   useEffect(() => {
@@ -135,6 +136,7 @@ export function CardForm({
     setBack('');
     setFrontAttachments([]);
     setBackAttachments([]);
+    setFormKey((k) => k + 1);
   }
 
   async function submit(e: React.FormEvent) {
@@ -194,6 +196,7 @@ export function CardForm({
   return (
     <form className="grid gap-3" onSubmit={submit}>
       <CardSideEditor
+        key={`front-${formKey}`}
         heading="Front"
         text={front}
         onTextChange={setFront}
@@ -202,6 +205,7 @@ export function CardForm({
         defaultLanguage={null}
       />
       <CardSideEditor
+        key={`back-${formKey}`}
         heading="Back"
         text={back}
         onTextChange={setBack}
