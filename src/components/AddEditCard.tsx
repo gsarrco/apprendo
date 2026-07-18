@@ -166,6 +166,7 @@ export function CardForm({
           back_attachments: backAttachments,
           updatedAt: Date.now()
         });
+        resetForm();
         onDone?.();
       } else {
         const empty = createEmptyCard(new Date());
