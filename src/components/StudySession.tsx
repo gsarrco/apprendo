@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Check, Clock, Loader2, Volume2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Rating, State, type Grade } from 'ts-fsrs';
@@ -7,7 +7,8 @@ import { getDb } from '../db';
 import { scheduler } from '../fsrs/scheduler';
 import { toFsrsCard, fromFsrsCard, fromFsrsLog } from '../fsrs/mappers';
 import { useDueCards } from '../hooks/useDueCards';
-import type { CardAttachment, CardDoc } from '../types';
+import { useDecks } from '../hooks/useDecks';
+import type { CardAttachment, CardDoc, Deck } from '../types';
 import { RatingButtons } from './RatingButtons';
 import { btnPrimary, btnSecondary } from './ui';
 import { useToast } from '../hooks/useToast';
@@ -95,9 +96,21 @@ const STATE_STYLES: Record<number, string> = {
   3: 'border-red-400/60 text-red-500'
 };
 
-export function StudySession() {
-  const { deckId } = useParams();
-  const { cards, loaded } = useDueCards(deckId);
+function StudySessionCore({
+  deckIds,
+  exitTo,
+  doneLinks
+}: {
+  deckIds: string[];
+  exitTo: string;
+  doneLinks: { label: string; to: string }[];
+}) {
+  const { cards, loaded } = useDueCards(deckIds);
+  const decks = useDecks();
+  const deckById = useMemo(
+    () => new Map<string, Deck>(decks.map((d) => [d.id, d])),
+    [decks]
+  );
 
   const [session, setSession] = useState<SessionEntry[]>([]);
   const [initialCount, setInitialCount] = useState(0);
@@ -249,8 +262,6 @@ export function StudySession() {
     }
   }
 
-  if (!deckId) return <p>Missing deck.</p>;
-
   if (!loaded && !seededRef.current) {
     return (
       <div className="flex min-h-[280px] items-center justify-center">
@@ -276,12 +287,11 @@ export function StudySession() {
           </p>
         </div>
         <div className="flex justify-center gap-2">
-          <Link to={`/deck/${deckId}`} className={btnSecondary}>
-            Back to deck
-          </Link>
-          <Link to="/" className={btnSecondary}>
-            Decks
-          </Link>
+          {doneLinks.map((l) => (
+            <Link key={l.to} to={l.to} className={btnSecondary}>
+              {l.label}
+            </Link>
+          ))}
         </div>
       </div>
     );
@@ -296,16 +306,15 @@ export function StudySession() {
           </div>
           <h2 className="text-lg font-bold">All done!</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-            No more due cards in this deck.
+            No more due cards.
           </p>
         </div>
         <div className="flex justify-center gap-2">
-          <Link to={`/deck/${deckId}`} className={btnSecondary}>
-            Back to deck
-          </Link>
-          <Link to="/" className={btnSecondary}>
-            Decks
-          </Link>
+          {doneLinks.map((l) => (
+            <Link key={l.to} to={l.to} className={btnSecondary}>
+              {l.label}
+            </Link>
+          ))}
         </div>
       </div>
     );
@@ -318,7 +327,7 @@ export function StudySession() {
           {remaining} card{remaining === 1 ? '' : 's'} remaining
         </span>
         <Link
-          to={`/deck/${deckId}`}
+          to={exitTo}
           className="text-sm text-zinc-500 transition hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400"
         >
           Exit
@@ -333,11 +342,22 @@ export function StudySession() {
       </div>
 
       <div className="flex min-h-[280px] flex-col gap-5 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <span
-          className={`self-start rounded-full border px-2.5 py-0.5 text-[0.7rem] font-medium uppercase tracking-wider ${STATE_STYLES[current.state] ?? STATE_STYLES[0]}`}
-        >
-          {STATE_LABELS[current.state] ?? current.state}
-        </span>
+        <div className="flex flex-wrap gap-2 self-start">
+          <span
+            className={`rounded-full border px-2.5 py-0.5 text-[0.7rem] font-medium uppercase tracking-wider ${STATE_STYLES[current.state] ?? STATE_STYLES[0]}`}
+          >
+            {STATE_LABELS[current.state] ?? current.state}
+          </span>
+          {(() => {
+            const deckName = deckById.get(current.deckId)?.name;
+            if (!deckName) return null;
+            return (
+              <span className="rounded-full border border-indigo-400/60 px-2.5 py-0.5 text-[0.7rem] font-medium uppercase tracking-wider text-indigo-500">
+                <strong>{deckName}</strong>
+              </span>
+            );
+          })()}
+        </div>
         <ImageGrid attachments={current.front_attachments} />
         <div className="flex items-start gap-2">
           <div className="text-xl font-semibold leading-relaxed whitespace-pre-wrap">
@@ -389,5 +409,29 @@ export function StudySession() {
         )}
       </div>
     </div>
+  );
+}
+
+export function MultiDeckStudySession() {
+  const [params] = useSearchParams();
+  const deckIds = useMemo(
+    () => params.get('decks')?.split(',').filter(Boolean) ?? [],
+    [params]
+  );
+  if (deckIds.length === 0) return <p>No decks selected.</p>;
+  const singleDeckId = deckIds.length === 1 ? deckIds[0] : undefined;
+  const doneLinks =
+    singleDeckId !== undefined
+      ? [
+          { label: 'Back to deck', to: `/deck/${singleDeckId}` },
+          { label: 'Decks', to: '/' }
+        ]
+      : [{ label: 'Decks', to: '/' }];
+  return (
+    <StudySessionCore
+      deckIds={deckIds}
+      exitTo="/"
+      doneLinks={doneLinks}
+    />
   );
 }

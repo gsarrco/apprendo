@@ -3,14 +3,14 @@ import type { Subscription } from 'rxjs';
 import { getDb } from '../db';
 import type { CardDoc } from '../types';
 
-export function useDueCards(deckId: string | undefined): {
+export function useDueCards(deckIds: string[]): {
   cards: CardDoc[];
   loaded: boolean;
 } {
   const [cards, setCards] = useState<CardDoc[]>([]);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    if (!deckId) {
+    if (deckIds.length === 0) {
       setCards([]);
       setLoaded(false);
       return;
@@ -23,7 +23,7 @@ export function useDueCards(deckId: string | undefined): {
         if (!active) return;
         sub = db.cards
           .find({
-            selector: { deckId, due: { $lte: now } },
+            selector: { deckId: { $in: deckIds }, due: { $lte: now } },
             sort: [{ due: 'asc' }]
           })
           .$.subscribe((docs) => {
@@ -36,6 +36,6 @@ export function useDueCards(deckId: string | undefined): {
       active = false;
       sub?.unsubscribe();
     };
-  }, [deckId]);
+  }, [deckIds]);
   return { cards, loaded };
 }

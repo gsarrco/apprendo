@@ -228,7 +228,7 @@ export function DeckDetail() {
         )}
       </nav>
       <div className="flex flex-wrap items-center gap-4">
-        <Link to={`/deck/${deckId}/study`} className={btnPrimary}>
+        <Link to={`/study?decks=${deckId}`} className={btnPrimary}>
           Study now
         </Link>
         <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">

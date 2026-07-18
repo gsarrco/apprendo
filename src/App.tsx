@@ -1,7 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Layout, DeckIndex } from './components/AppLayout';
 import { DeckDetail } from './components/CardList';
-import { StudySession } from './components/StudySession';
+import { MultiDeckStudySession } from './components/StudySession';
 import { ToastProvider } from './components/Toast';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 
@@ -12,7 +12,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DeckIndex /> },
       { path: 'deck/:deckId', element: <DeckDetail /> },
-      { path: 'deck/:deckId/study', element: <StudySession /> },
+      { path: 'study', element: <MultiDeckStudySession /> },
       { path: '*', element: <DeckIndex /> }
     ]
   }
