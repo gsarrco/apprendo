@@ -13,9 +13,10 @@ import {
   rectSortingStrategy
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Trash2, Volume2 } from 'lucide-react';
+import { Volume2 } from 'lucide-react';
 import type { CardAttachment } from '../types';
 import { playAudio } from '../lib/commonsThumb';
+import { DeleteButton } from './DeleteButton';
 
 interface AttachmentTrayProps {
   items: CardAttachment[];
@@ -50,8 +51,13 @@ function TrayTile({ item, onRemove }: TrayTileProps) {
       {...attributes}
       {...listeners}
       title={item.attribution ?? undefined}
-      className="group relative flex cursor-grab items-center gap-2 overflow-hidden rounded-lg border-2 border-zinc-200 bg-white p-1 pr-2 transition active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-900"
+      className="relative flex cursor-grab items-center gap-2 overflow-hidden rounded-lg border-2 border-zinc-200 bg-white p-1 pr-2 transition active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-900"
     >
+      <DeleteButton
+        label="Remove attachment"
+        onDelete={async () => onRemove()}
+        className="absolute right-0 top-0 z-10 flex h-4 w-4 items-center justify-center rounded-none rounded-bl-md bg-zinc-900/70 p-0 text-white shadow-none hover:bg-red-600 [&_svg]:h-2.5 [&_svg]:w-2.5"
+      />
       <button
         type="button"
         aria-label={item.type === 'audio' ? 'Play audio' : 'View attachment'}
@@ -79,17 +85,6 @@ function TrayTile({ item, onRemove }: TrayTileProps) {
       <span className="line-clamp-2 max-w-[8rem] text-xs leading-tight text-zinc-700 dark:text-zinc-200">
         {item.caption}
       </span>
-      <button
-        type="button"
-        aria-label="Remove attachment"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center bg-zinc-900/70 text-white opacity-0 transition hover:bg-red-600 group-hover:opacity-100"
-      >
-        <Trash2 className="h-2.5 w-2.5" aria-hidden="true" />
-      </button>
     </div>
   );
 }
