@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Check, Clock, Loader2, Volume2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Check, Clock, Loader2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Rating, State, type Grade } from 'ts-fsrs';
 import { getDb } from '../db';
 import { scheduler } from '../fsrs/scheduler';
 import { toFsrsCard, fromFsrsCard, fromFsrsLog } from '../fsrs/mappers';
+import { formatInterval } from '../lib/format';
 import { useDueCards } from '../hooks/useDueCards';
 import { useDecks } from '../hooks/useDecks';
-import type { CardAttachment, CardDoc, Deck } from '../types';
+import type { CardDoc, Deck } from '../types';
 import { RatingButtons } from './RatingButtons';
+import { CardStateBadge } from './CardStateBadge';
+import {
+  AttachmentAttributions,
+  AttachmentAudioButtons,
+  AttachmentImageGrid
+} from './Attachments';
 import { btnPrimary, btnSecondary } from './ui';
 import { useToast } from '../hooks/useToast';
 
@@ -17,86 +24,7 @@ const LEARN_AHEAD_MS = 30_000;
 
 type SessionEntry = { card: CardDoc; due: number };
 
-function ImageGrid({ attachments }: { attachments: CardAttachment[] }) {
-  const images = attachments.filter((a) => a.type === 'image');
-  if (images.length === 0) return null;
-  return (
-    <div
-      className={`grid gap-2 ${images.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
-    >
-      {images.map((a) => (
-        <img
-          key={a.url}
-          src={a.url}
-          alt=""
-          className="max-h-[200px] w-full rounded-xl object-contain"
-        />
-      ))}
-    </div>
-  );
-}
-
-function AudioButtons({
-  attachments,
-  onPlay
-}: {
-  attachments: CardAttachment[];
-  onPlay: (index: number) => void;
-}) {
-  const audio = attachments.filter((a) => a.type === 'audio');
-  if (audio.length === 0) return null;
-  return (
-    <div className="mt-1 flex flex-wrap gap-2">
-      {audio.map((a, i) => (
-        <button
-          key={a.url}
-          type="button"
-          aria-label={`Play audio ${i + 1}`}
-          onClick={() => onPlay(i)}
-          className="text-zinc-400 transition hover:text-indigo-600 dark:hover:text-indigo-400"
-        >
-          <Volume2 className="h-5 w-5" aria-hidden="true" />
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Attributions({ attachments }: { attachments: CardAttachment[] }) {
-  const withAttr = attachments.filter((a) => a.attribution);
-  if (withAttr.length === 0) return null;
-  return (
-    <div className="space-y-0.5 text-[0.65rem] text-zinc-400 dark:text-zinc-500">
-      {withAttr.map((a) => (
-        <div key={a.url}>{a.attribution}</div>
-      ))}
-    </div>
-  );
-}
-
-function formatInterval(ms: number): string {
-  if (ms < 60_000) return `${Math.max(1, Math.round(ms / 1000))}s`;
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.round(ms / 3_600_000);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.round(ms / 86_400_000);
-  if (days < 30) return `${days}d`;
-  const months = Math.round(days / 30);
-  if (months < 12) return `${months}mo`;
-  return `${(days / 365).toFixed(1)}y`;
-}
-
-const STATE_LABELS = ['New', 'Learning', 'Review', 'Relearning'];
-
-const STATE_STYLES: Record<number, string> = {
-  0: 'border-zinc-300 text-zinc-500 dark:border-zinc-600 dark:text-zinc-400',
-  1: 'border-amber-400/60 text-amber-500',
-  2: 'border-emerald-400/60 text-emerald-500',
-  3: 'border-red-400/60 text-red-500'
-};
-
-function StudySessionCore({
+export function StudySessionCore({
   deckIds,
   exitTo,
   doneLinks
@@ -343,11 +271,7 @@ function StudySessionCore({
 
       <div className="flex min-h-[280px] flex-col gap-5 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex flex-wrap gap-2 self-start">
-          <span
-            className={`rounded-full border px-2.5 py-0.5 text-[0.7rem] font-medium uppercase tracking-wider ${STATE_STYLES[current.state] ?? STATE_STYLES[0]}`}
-          >
-            {STATE_LABELS[current.state] ?? current.state}
-          </span>
+          <CardStateBadge state={current.state} size="md" />
           {(() => {
             const deckName = deckById.get(current.deckId)?.name;
             if (!deckName) return null;
@@ -358,34 +282,36 @@ function StudySessionCore({
             );
           })()}
         </div>
-        <ImageGrid attachments={current.front_attachments} />
+        <AttachmentImageGrid attachments={current.front_attachments} />
         <div className="flex items-start gap-2">
           <div className="text-xl font-semibold leading-relaxed whitespace-pre-wrap">
             {current.front}
           </div>
-          <AudioButtons
+          <AttachmentAudioButtons
             attachments={current.front_attachments}
+            size="md"
             onPlay={(i) => {
               if (showBack) return;
               setPlayIndex(i);
             }}
           />
         </div>
-        <Attributions attachments={current.front_attachments} />
+        <AttachmentAttributions attachments={current.front_attachments} />
         {showBack ? (
           <>
             <hr className="border-zinc-200 dark:border-zinc-800" />
-            <ImageGrid attachments={current.back_attachments} />
+            <AttachmentImageGrid attachments={current.back_attachments} />
             <div className="flex items-start gap-2">
               <div className="text-lg leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
                 {current.back}
               </div>
-              <AudioButtons
+              <AttachmentAudioButtons
                 attachments={current.back_attachments}
+                size="md"
                 onPlay={setPlayIndex}
               />
             </div>
-            <Attributions attachments={current.back_attachments} />
+            <AttachmentAttributions attachments={current.back_attachments} />
           </>
         ) : null}
       </div>
@@ -409,29 +335,5 @@ function StudySessionCore({
         )}
       </div>
     </div>
-  );
-}
-
-export function MultiDeckStudySession() {
-  const [params] = useSearchParams();
-  const deckIds = useMemo(
-    () => params.get('decks')?.split(',').filter(Boolean) ?? [],
-    [params]
-  );
-  if (deckIds.length === 0) return <p>No decks selected.</p>;
-  const singleDeckId = deckIds.length === 1 ? deckIds[0] : undefined;
-  const doneLinks =
-    singleDeckId !== undefined
-      ? [
-          { label: 'Back to deck', to: `/deck/${singleDeckId}` },
-          { label: 'Decks', to: '/' }
-        ]
-      : [{ label: 'Decks', to: '/' }];
-  return (
-    <StudySessionCore
-      deckIds={deckIds}
-      exitTo="/"
-      doneLinks={doneLinks}
-    />
   );
 }

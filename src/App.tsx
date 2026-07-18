@@ -1,9 +1,12 @@
+import { lazy } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { Layout, DeckIndex } from './components/AppLayout';
-import { DeckDetail } from './components/CardList';
-import { MultiDeckStudySession } from './components/StudySession';
+import { Layout } from './components/AppLayout';
 import { ToastProvider } from './components/Toast';
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
+
+const DeckIndex = lazy(() => import('./pages/DeckIndex'));
+const DeckDetail = lazy(() => import('./pages/DeckDetail'));
+const MultiDeckStudySession = lazy(() => import('./pages/MultiDeckStudySession'));
 
 const router = createBrowserRouter([
   {

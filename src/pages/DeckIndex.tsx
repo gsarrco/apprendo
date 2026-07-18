@@ -6,10 +6,11 @@ import { Trash2 } from 'lucide-react';
 import { getDb } from '../db';
 import type { Deck, Language } from '../types';
 import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
-import { btnPrimary, inputClass } from './ui';
+import { btnPrimary, inputClass } from '../components/ui';
 import { useToast } from '../hooks/useToast';
+import { useDecks } from '../hooks/useDecks';
 
-export function DeckForm() {
+function DeckForm() {
   const [name, setName] = useState('');
   const [languageQid, setLanguageQid] = useState('');
   const { notify } = useToast();
@@ -67,7 +68,7 @@ export function DeckForm() {
   );
 }
 
-export function DeckList({ decks }: { decks: Deck[] }) {
+function DeckList({ decks }: { decks: Deck[] }) {
   const navigate = useNavigate();
   const { notify } = useToast();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -181,5 +182,21 @@ export function DeckList({ decks }: { decks: Deck[] }) {
         })}
       </ul>
     </div>
+  );
+}
+
+export default function DeckIndex() {
+  const decks = useDecks();
+  return (
+    <section className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight">Decks</h2>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Create decks of flashcards and study them on a spaced-repetition schedule.
+        </p>
+      </div>
+      <DeckForm />
+      <DeckList decks={decks} />
+    </section>
   );
 }

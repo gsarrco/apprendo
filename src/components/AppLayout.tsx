@@ -1,23 +1,15 @@
+import { Suspense } from 'react';
 import { Link, Outlet } from 'react-router-dom';
-import { useDecks } from '../hooks/useDecks';
-import { DeckForm, DeckList } from './DeckList';
+import { Loader2 } from 'lucide-react';
 import { InstallButton } from './InstallButton';
 import { IosInstallHint } from './IosInstallHint';
 import { ThemeToggle } from './ThemeToggle';
 
-export function DeckIndex() {
-  const decks = useDecks();
+function RouteFallback() {
   return (
-    <section className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold tracking-tight">Decks</h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Create decks of flashcards and study them on a spaced-repetition schedule.
-        </p>
-      </div>
-      <DeckForm />
-      <DeckList decks={decks} />
-    </section>
+    <div className="flex min-h-[280px] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-zinc-400" aria-hidden="true" />
+    </div>
   );
 }
 
@@ -39,7 +31,9 @@ export function Layout() {
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-5 py-10">
-        <Outlet />
+        <Suspense fallback={<RouteFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
       <IosInstallHint />
     </div>
