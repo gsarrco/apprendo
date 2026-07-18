@@ -46,6 +46,7 @@ export function StudySessionCore({
   const [showBack, setShowBack] = useState(false);
   const [busy, setBusy] = useState(false);
   const [playIndex, setPlayIndex] = useState(0);
+  const [playToken, setPlayToken] = useState(0);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const { notify } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -102,11 +103,23 @@ export function StudySessionCore({
       audio.pause();
       if (audioRef.current === audio) audioRef.current = null;
     };
-  }, [showBack, current?.id, current?.front_attachments, current?.back_attachments, playIndex]);
+  }, [
+    showBack,
+    current?.id,
+    current?.front_attachments,
+    current?.back_attachments,
+    playIndex,
+    playToken
+  ]);
 
   useEffect(() => {
     setPlayIndex(0);
   }, [current?.id, showBack]);
+
+  function playAt(i: number) {
+    setPlayIndex(i);
+    setPlayToken((t) => t + 1);
+  }
 
   const previews = useMemo(() => {
     if (!current) return {};
@@ -292,7 +305,7 @@ export function StudySessionCore({
             size="md"
             onPlay={(i) => {
               if (showBack) return;
-              setPlayIndex(i);
+              playAt(i);
             }}
           />
         </div>
@@ -308,7 +321,7 @@ export function StudySessionCore({
               <AttachmentAudioButtons
                 attachments={current.back_attachments}
                 size="md"
-                onPlay={setPlayIndex}
+                onPlay={playAt}
               />
             </div>
             <AttachmentAttributions attachments={current.back_attachments} />
