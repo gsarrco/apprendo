@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Check, Volume2 } from 'lucide-react';
+import { Check, Clock, Loader2, Volume2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { Rating, type Grade } from 'ts-fsrs';
+import { Rating, State, type Grade } from 'ts-fsrs';
 import { getDb } from '../db';
 import { scheduler } from '../fsrs/scheduler';
 import { toFsrsCard, fromFsrsCard, fromFsrsLog } from '../fsrs/mappers';
@@ -11,6 +11,10 @@ import type { CardAttachment, CardDoc } from '../types';
 import { RatingButtons } from './RatingButtons';
 import { btnPrimary, btnSecondary } from './ui';
 import { useToast } from '../hooks/useToast';
+
+const LEARN_AHEAD_MS = 30_000;
+
+type SessionEntry = { card: CardDoc; due: number };
 
 function ImageGrid({ attachments }: { attachments: CardAttachment[] }) {
   const images = attachments.filter((a) => a.type === 'image');
@@ -93,21 +97,49 @@ const STATE_STYLES: Record<number, string> = {
 
 export function StudySession() {
   const { deckId } = useParams();
-  const due = useDueCards(deckId);
+  const { cards, loaded } = useDueCards(deckId);
 
-  const [seenIds, setSeenIds] = useState<string[]>([]);
+  const [session, setSession] = useState<SessionEntry[]>([]);
+  const [initialCount, setInitialCount] = useState(0);
+  const seededRef = useRef(false);
   const [showBack, setShowBack] = useState(false);
   const [busy, setBusy] = useState(false);
   const [playIndex, setPlayIndex] = useState(0);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const { notify } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const queue = useMemo(
-    () => due.filter((c) => !seenIds.includes(c.id)),
-    [due, seenIds]
+  useEffect(() => {
+    if (seededRef.current || !loaded) return;
+    seededRef.current = true;
+    const entries = cards.map((c) => ({ card: c, due: Date.parse(c.due) }));
+    setSession(entries);
+    setInitialCount(entries.length);
+  }, [loaded, cards]);
+
+  useEffect(() => {
+    if (session.length === 0) return;
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [session.length]);
+
+  const ready = useMemo(
+    () =>
+      session
+        .filter((e) => e.due <= nowTick + LEARN_AHEAD_MS)
+        .sort((a, b) => a.due - b.due),
+    [session, nowTick]
+  );
+  const pending = useMemo(
+    () =>
+      session
+        .filter((e) => e.due > nowTick + LEARN_AHEAD_MS)
+        .sort((a, b) => a.due - b.due),
+    [session, nowTick]
   );
 
-  const current = queue[0];
+  const current = ready[0]?.card;
+  const nextDueAt = pending[0]?.due;
 
   useEffect(() => {
     const audios = showBack
@@ -156,9 +188,10 @@ export function StudySession() {
     return out;
   }, [current]);
 
-  const total = due.length || 1;
-  const remaining = queue.length;
-  const progress = Math.round(((total - remaining) / total) * 100);
+  const total = initialCount || 1;
+  const remaining = session.length;
+  const graduated = initialCount - remaining;
+  const progress = Math.round((graduated / total) * 100);
 
   async function rate(rating: Grade) {
     if (!current || busy) return;
@@ -197,8 +230,18 @@ export function StudySession() {
       await db.reviewlogs.insert(
         fromFsrsLog(result.log, nanoid(), cardDoc.id)
       );
-      setSeenIds((prev) => [...prev, cardDoc.id]);
+      setSession((prev) => {
+        const idx = prev.findIndex((e) => e.card.id === cardDoc.id);
+        if (idx === -1) return prev;
+        if (updated.state === State.Review) {
+          return [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+        }
+        const next = [...prev];
+        next[idx] = { card: updated, due: Date.parse(updated.due) };
+        return next;
+      });
       setShowBack(false);
+      setNowTick(Date.now());
     } catch (err) {
       notify(`Could not save review: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -207,6 +250,42 @@ export function StudySession() {
   }
 
   if (!deckId) return <p>Missing deck.</p>;
+
+  if (!loaded && !seededRef.current) {
+    return (
+      <div className="flex min-h-[280px] items-center justify-center">
+        <Loader2
+          className="h-6 w-6 animate-spin text-zinc-400"
+          aria-hidden="true"
+        />
+      </div>
+    );
+  }
+
+  if (!current && pending.length > 0) {
+    const waitMs = Math.max(0, (nextDueAt ?? nowTick) - nowTick);
+    return (
+      <div className="space-y-8">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-8 py-12 text-center dark:border-amber-500/20 dark:bg-amber-500/10">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-white">
+            <Clock className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
+          </div>
+          <h2 className="text-lg font-bold">Come back in {formatInterval(waitMs)}</h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+            {pending.length} card{pending.length === 1 ? '' : 's'} still learning.
+          </p>
+        </div>
+        <div className="flex justify-center gap-2">
+          <Link to={`/deck/${deckId}`} className={btnSecondary}>
+            Back to deck
+          </Link>
+          <Link to="/" className={btnSecondary}>
+            Decks
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!current) {
     return (

@@ -3,11 +3,16 @@ import type { Subscription } from 'rxjs';
 import { getDb } from '../db';
 import type { CardDoc } from '../types';
 
-export function useDueCards(deckId: string | undefined): CardDoc[] {
+export function useDueCards(deckId: string | undefined): {
+  cards: CardDoc[];
+  loaded: boolean;
+} {
   const [cards, setCards] = useState<CardDoc[]>([]);
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     if (!deckId) {
       setCards([]);
+      setLoaded(false);
       return;
     }
     let sub: Subscription | undefined;
@@ -23,6 +28,7 @@ export function useDueCards(deckId: string | undefined): CardDoc[] {
           })
           .$.subscribe((docs) => {
             setCards(docs.map((d) => d.toJSON(true) as unknown as CardDoc));
+            setLoaded(true);
           });
       });
     run();
@@ -31,5 +37,5 @@ export function useDueCards(deckId: string | undefined): CardDoc[] {
       sub?.unsubscribe();
     };
   }, [deckId]);
-  return cards;
+  return { cards, loaded };
 }
