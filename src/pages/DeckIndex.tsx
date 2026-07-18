@@ -160,12 +160,12 @@ function DeckList({ decks }: { decks: Deck[] }) {
           const checked = selectedIds.has(deck.id);
           return (
             <li key={deck.id} className="relative">
-              <Checkbox
-                checked={checked}
-                onChange={() => toggle(deck.id)}
+              <label
+                className="absolute right-1 top-1 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 aria-label={`Select ${deck.name}`}
-                className="absolute right-2 top-2 z-10"
-              />
+              >
+                <Checkbox checked={checked} onChange={() => toggle(deck.id)} />
+              </label>
               <Link
                 to={`/deck/${deck.id}`}
                 className="group flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-indigo-500"
