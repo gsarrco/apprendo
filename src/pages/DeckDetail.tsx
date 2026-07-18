@@ -39,6 +39,13 @@ function CardList({
         editingCard={editingCard}
         onDone={() => setEditingCardId(null)}
       />
+      <div className="mt-6 mb-2 flex items-center gap-3" role="separator">
+        <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+        <span className="text-xs font-medium tracking-wide text-zinc-400 dark:text-zinc-500">
+          {cards.length === 0 ? 'Cards' : `Cards · ${cards.length}`}
+        </span>
+        <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+      </div>
       {cards.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">
           No cards yet. Add one above.
