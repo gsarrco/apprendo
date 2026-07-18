@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { nanoid } from 'nanoid';
 import { Link, useNavigate } from 'react-router-dom';
 import { Checkbox, Dropdown, DropdownItem } from 'flowbite-react';
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { getDb } from '../db';
 import type { Deck, Language } from '../types';
 import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
-import { btnPrimary, inputClass } from '../components/ui';
+import { btnGhost, btnPrimary, inputClass } from '../components/ui';
 import { useToast } from '../hooks/useToast';
 import { useDecks } from '../hooks/useDecks';
 
-function DeckForm() {
+function DeckForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
   const [languageQid, setLanguageQid] = useState('');
   const { notify } = useToast();
@@ -33,6 +33,7 @@ function DeckForm() {
       await db.decks.insert(deck);
       setName('');
       setLanguageQid('');
+      onDone();
     } catch (err) {
       notify(`Could not create deck: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -63,6 +64,9 @@ function DeckForm() {
       </select>
       <button type="submit" className={btnPrimary}>
         Add deck
+      </button>
+      <button type="button" className={btnGhost} onClick={onDone}>
+        Cancel
       </button>
     </form>
   );
@@ -187,6 +191,7 @@ function DeckList({ decks }: { decks: Deck[] }) {
 
 export default function DeckIndex() {
   const decks = useDecks();
+  const [showForm, setShowForm] = useState(false);
   return (
     <section className="space-y-6">
       <div>
@@ -195,7 +200,18 @@ export default function DeckIndex() {
           Create decks of flashcards and study them on a spaced-repetition schedule.
         </p>
       </div>
-      <DeckForm />
+      {showForm ? (
+        <DeckForm onDone={() => setShowForm(false)} />
+      ) : (
+        <button
+          type="button"
+          className={btnGhost}
+          onClick={() => setShowForm(true)}
+        >
+          <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          New deck
+        </button>
+      )}
       <DeckList decks={decks} />
     </section>
   );
