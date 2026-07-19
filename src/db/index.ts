@@ -1,135 +1,55 @@
-import {
-  createRxDatabase,
-  addRxPlugin,
-  type RxDatabase,
-  type RxCollection
-} from 'rxdb';
+import { addRxPlugin } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
-import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
-import { deckSchema } from './schemas/deck.schema';
-import { cardSchema } from './schemas/card.schema';
-import { reviewLogSchema } from './schemas/reviewLog.schema';
-import type { Deck, CardDoc, ReviewLogDoc, AttachmentType, CardAttachment } from '../types';
+import { createAppDatabase, type AppDatabase } from './database';
+import type { CardDoc, Deck, ReviewLogDoc } from '../types';
 
-export type DeckCollection = RxCollection<Deck>;
-export type CardCollection = RxCollection<CardDoc>;
-export type ReviewLogCollection = RxCollection<ReviewLogDoc>;
+export * from './database';
 
-export type AppCollections = {
-  decks: DeckCollection;
-  cards: CardCollection;
-  reviewlogs: ReviewLogCollection;
+type E2ESeeds = {
+  decks: Deck[];
+  cards: CardDoc[];
+  reviewlogs: ReviewLogDoc[];
 };
 
-export type AppDatabase = RxDatabase<AppCollections>;
+function readE2ESeeds(): E2ESeeds | null {
+  if (typeof window === 'undefined') return null;
+  return (
+    (window as unknown as { __APPRENDO_E2E_SEEDS__?: E2ESeeds })
+      .__APPRENDO_E2E_SEEDS__ ?? null
+  );
+}
+
+async function initDb(): Promise<AppDatabase> {
+  const seeds = readE2ESeeds();
+  if (seeds) {
+    const { getRxStorageMemory } = await import('rxdb/plugins/storage-memory');
+    const db = await createAppDatabase({
+      name: 'test-db',
+      storage: getRxStorageMemory()
+    });
+    await db.decks.bulkInsert(seeds.decks);
+    await db.cards.bulkInsert(seeds.cards);
+    await db.reviewlogs.bulkInsert(seeds.reviewlogs);
+    return db;
+  }
+  if (import.meta.env.DEV) addRxPlugin(RxDBDevModePlugin);
+  return createAppDatabase({
+    name: 'apprendodb',
+    storage: wrappedValidateAjvStorage({ storage: getRxStorageDexie() }),
+    ignoreDuplicate: import.meta.env.DEV
+  });
+}
 
 let dbPromise: Promise<AppDatabase> | null = null;
 
 export function getDb(): Promise<AppDatabase> {
   if (!dbPromise) {
-    if (import.meta.env.DEV) {
-      addRxPlugin(RxDBDevModePlugin);
-    }
-    addRxPlugin(RxDBMigrationSchemaPlugin);
-    dbPromise = createRxDatabase<AppCollections>({
-      name: 'apprendodb',
-      storage: wrappedValidateAjvStorage({ storage: getRxStorageDexie() }),
-      ignoreDuplicate: import.meta.env.DEV
-    }).then(async (db: AppDatabase) => {
-      await db.addCollections({
-        decks: {
-          schema: deckSchema,
-          migrationStrategies: {
-            1: (oldDoc: Record<string, unknown>) => ({
-              ...oldDoc,
-              language: null
-            })
-          }
-        },
-        cards: {
-          schema: cardSchema,
-          migrationStrategies: {
-            1: (oldDoc: Record<string, unknown>) => ({
-              ...oldDoc,
-              image_url: null,
-              image_attribution: null
-            }),
-            2: (oldDoc: Record<string, unknown>) => ({
-              ...oldDoc,
-              audio_url: null,
-              audio_attribution: null
-            }),
-            3: (old: Record<string, unknown>) => {
-              const build = (
-                urlKey: string,
-                attrKey: string,
-                type: AttachmentType
-              ): CardAttachment | null =>
-                old[urlKey] != null
-                  ? {
-                      type,
-                      url: old[urlKey] as string,
-                      caption: '',
-                      attribution: (old[attrKey] as string | null) ?? null,
-                      createdAt: old.createdAt as number
-                    }
-                  : null;
-              const rest = { ...old };
-              delete rest.image_url;
-              delete rest.image_attribution;
-              delete rest.audio_url;
-              delete rest.audio_attribution;
-              return {
-                ...rest,
-                front_attachment: build(
-                  'image_url',
-                  'image_attribution',
-                  'image'
-                ),
-                back_attachment: build(
-                  'audio_url',
-                  'audio_attribution',
-                  'audio'
-                )
-              };
-            },
-            4: (old: Record<string, unknown>) => {
-              const toList = (single: unknown): CardAttachment[] =>
-                single ? [single as CardAttachment] : [];
-              const rest = { ...old };
-              delete rest.front_attachment;
-              delete rest.back_attachment;
-              return {
-                ...rest,
-                front_attachments: toList(old.front_attachment),
-                back_attachments: toList(old.back_attachment)
-              };
-            },
-            5: (old: Record<string, unknown>) => {
-              const addCaption = (list: unknown): CardAttachment[] =>
-                Array.isArray(list)
-                  ? list.map((item) => ({
-                      ...(item as CardAttachment),
-                      caption: (item as CardAttachment).caption ?? ''
-                    }))
-                  : [];
-              return {
-                ...old,
-                front_attachments: addCaption(old.front_attachments),
-                back_attachments: addCaption(old.back_attachments)
-              };
-            }
-          }
-        },
-        reviewlogs: { schema: reviewLogSchema }
-      });
-      return db;
-    });
+    dbPromise = initDb();
     dbPromise.catch(() => {
       dbPromise = null;
     });
   }
-  return dbPromise as Promise<AppDatabase>;
+  return dbPromise;
 }
