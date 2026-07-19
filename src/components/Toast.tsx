@@ -7,7 +7,6 @@ import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import {
   ToastContext,
   type Toast,
-  type ToastAction,
   type ToastType
 } from '../hooks/useToast';
 
@@ -35,17 +34,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const notify = useCallback(
-    (
-      message: string,
-      type: ToastType = 'error',
-      options?: { action?: ToastAction; persist?: boolean }
-    ) => {
+    (message: string, type: ToastType = 'error') => {
       const id = ++counter;
-      setToasts((prev) => [
-        ...prev,
-        { id, message, type, action: options?.action }
-      ]);
-      if (!options?.persist) setTimeout(() => dismiss(id), 5000);
+      setToasts((prev) => [...prev, { id, message, type }]);
+      setTimeout(() => dismiss(id), 5000);
     },
     [dismiss]
   );
@@ -86,15 +78,6 @@ function ToastItem({
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       <p className="flex-1 text-sm">{toast.message}</p>
-      {toast.action && (
-        <button
-          type="button"
-          onClick={toast.action.onClick}
-          className="shrink-0 text-sm font-medium opacity-70 transition hover:opacity-100"
-        >
-          {toast.action.label}
-        </button>
-      )}
       <button
         type="button"
         onClick={onDismiss}

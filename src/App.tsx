@@ -2,7 +2,6 @@ import { lazy } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Layout } from './components/AppLayout';
 import { ToastProvider } from './components/Toast';
-import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
 
 const DeckIndex = lazy(() => import('./pages/DeckIndex'));
 const DeckDetail = lazy(() => import('./pages/DeckDetail'));
@@ -24,7 +23,6 @@ const router = createBrowserRouter([
 export default function App() {
   return (
     <ToastProvider>
-      <PwaUpdatePrompt />
       <RouterProvider router={router} />
     </ToastProvider>
   );
