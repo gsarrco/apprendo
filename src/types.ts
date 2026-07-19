@@ -9,7 +9,6 @@ export interface Language {
 export interface Deck {
   id: string;
   name: string;
-  language: Language | null;
   createdAt: number;
 }
 
@@ -20,6 +19,7 @@ export interface CardAttachment {
   url: string;
   caption: string;
   attribution: string | null;
+  language: Language | null;
   createdAt: number;
 }
 

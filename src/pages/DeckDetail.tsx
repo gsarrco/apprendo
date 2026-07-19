@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getDb } from '../db';
-import type { CardDoc, Language } from '../types';
-import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
+import type { CardDoc } from '../types';
 import { useCards } from '../hooks/useCards';
 import { useDeck } from '../hooks/useDecks';
 import { btnPrimary, inputClass } from '../components/ui';
@@ -13,18 +12,20 @@ import { AttachmentAudioButtons, AttachmentThumbnails } from '../components/Atta
 import { playAudio } from '../lib/commonsThumb';
 import { CardForm } from '../components/AddEditCard';
 
-function CardList({
-  deckId,
-  language
-}: {
-  deckId: string;
-  language: Language | null;
-}) {
+function CardList({ deckId }: { deckId: string }) {
   const cards = useCards(deckId);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const editingCard: CardDoc | null = useMemo(
     () => cards.find((c) => c.id === editingCardId) ?? null,
     [cards, editingCardId]
+  );
+  const latestCard: CardDoc | null = useMemo(
+    () =>
+      cards.reduce<CardDoc | null>(
+        (acc, c) => (acc === null || c.updatedAt > acc.updatedAt ? c : acc),
+        null
+      ),
+    [cards]
   );
   return (
     <div className="space-y-4">
@@ -35,7 +36,7 @@ function CardList({
       ) : null}
       <CardForm
         deckId={deckId}
-        language={language}
+        latestCard={latestCard}
         editingCard={editingCard}
         onDone={() => setEditingCardId(null)}
       />
@@ -191,33 +192,8 @@ export default function DeckDetail() {
         <Link to={`/study?decks=${deckId}`} className={btnPrimary}>
           Study now
         </Link>
-        <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-          Language
-          <select
-            value={deck?.language?.qid ?? ''}
-            onChange={async (e) => {
-              const value = e.target.value;
-              const newLang: Language | null = value
-                ? LANG_BY_QID[value] ?? null
-                : null;
-              const db = await getDb();
-              const doc = await db.decks
-                .findOne({ selector: { id: deckId } })
-                .exec();
-              await doc?.patch({ language: newLang });
-            }}
-            className={inputClass}
-          >
-            <option value="">No language</option>
-            {LANGUAGES.map((l) => (
-              <option key={l.qid} value={l.qid}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </label>
       </div>
-      <CardList deckId={deckId} language={deck?.language ?? null} />
+      <CardList deckId={deckId} />
     </div>
   );
 }

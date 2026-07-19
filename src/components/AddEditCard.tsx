@@ -17,12 +17,23 @@ const TABS: { id: SideTab; label: string; Icon: typeof TextAlignStart }[] = [
   { id: 'image', label: 'Image', Icon: ImageIcon }
 ];
 
+function sideDefaultTab(a: CardAttachment[]): SideTab {
+  if (a.some((x) => x.type === 'image')) return 'image';
+  if (a.some((x) => x.type === 'audio')) return 'pronunciation';
+  return 'text';
+}
+
+function sideAudioLanguage(a: CardAttachment[]): Language | null {
+  return a.find((x) => x.type === 'audio')?.language ?? null;
+}
+
 function CardSideEditor({
   heading,
   text,
   onTextChange,
   attachments,
   onAttachmentsChange,
+  defaultTab,
   defaultLanguage
 }: {
   heading: string;
@@ -30,9 +41,10 @@ function CardSideEditor({
   onTextChange: (v: string) => void;
   attachments: CardAttachment[];
   onAttachmentsChange: (next: CardAttachment[]) => void;
+  defaultTab: SideTab;
   defaultLanguage: Language | null;
 }) {
-  const [tab, setTab] = useState<SideTab>('text');
+  const [tab, setTab] = useState<SideTab>(defaultTab);
 
   return (
     <section className="grid gap-2">
@@ -105,12 +117,12 @@ function CardSideEditor({
 
 export function CardForm({
   deckId,
-  language,
+  latestCard,
   editingCard,
   onDone
 }: {
   deckId: string;
-  language: Language | null;
+  latestCard?: CardDoc | null;
   editingCard?: CardDoc | null;
   onDone?: () => void;
 }) {
@@ -121,6 +133,20 @@ export function CardForm({
   const [backAttachments, setBackAttachments] = useState<CardAttachment[]>([]);
   const [formKey, setFormKey] = useState(0);
   const { notify } = useToast();
+
+  const template = editingCard ?? latestCard ?? null;
+  const frontDefaultTab: SideTab = template
+    ? sideDefaultTab(template.front_attachments)
+    : 'text';
+  const frontDefaultLanguage: Language | null = template
+    ? sideAudioLanguage(template.front_attachments)
+    : null;
+  const backDefaultTab: SideTab = template
+    ? sideDefaultTab(template.back_attachments)
+    : 'text';
+  const backDefaultLanguage: Language | null = template
+    ? sideAudioLanguage(template.back_attachments)
+    : null;
 
   useEffect(() => {
     if (editingCard) {
@@ -196,22 +222,24 @@ export function CardForm({
   return (
     <form className="grid gap-3" onSubmit={submit}>
       <CardSideEditor
-        key={`front-${formKey}`}
+        key={`front-${editingCard?.id ?? 'new'}-${latestCard?.id ?? 'none'}-${formKey}`}
         heading="Front"
         text={front}
         onTextChange={setFront}
         attachments={frontAttachments}
         onAttachmentsChange={setFrontAttachments}
-        defaultLanguage={null}
+        defaultTab={frontDefaultTab}
+        defaultLanguage={frontDefaultLanguage}
       />
       <CardSideEditor
-        key={`back-${formKey}`}
+        key={`back-${editingCard?.id ?? 'new'}-${latestCard?.id ?? 'none'}-${formKey}`}
         heading="Back"
         text={back}
         onTextChange={setBack}
         attachments={backAttachments}
         onAttachmentsChange={setBackAttachments}
-        defaultLanguage={language}
+        defaultTab={backDefaultTab}
+        defaultLanguage={backDefaultLanguage}
       />
       <div className="flex items-center gap-2 justify-self-start">
         <button type="submit" className={btnPrimary}>

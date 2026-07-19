@@ -30,7 +30,12 @@ export const appCollections = {
       1: (oldDoc: Record<string, unknown>) => ({
         ...oldDoc,
         language: null
-      })
+      }),
+      2: (oldDoc: Record<string, unknown>) => {
+        const rest = { ...oldDoc };
+        delete rest.language;
+        return rest;
+      }
     }
   },
   cards: {
@@ -58,6 +63,7 @@ export const appCollections = {
                 url: old[urlKey] as string,
                 caption: '',
                 attribution: (old[attrKey] as string | null) ?? null,
+                language: null,
                 createdAt: old.createdAt as number
               }
             : null;
@@ -96,6 +102,20 @@ export const appCollections = {
           ...old,
           front_attachments: addCaption(old.front_attachments),
           back_attachments: addCaption(old.back_attachments)
+        };
+      },
+      6: (old: Record<string, unknown>) => {
+        const addLanguage = (list: unknown): CardAttachment[] =>
+          Array.isArray(list)
+            ? list.map((item) => ({
+                ...(item as CardAttachment),
+                language: (item as CardAttachment).language ?? null
+              }))
+            : [];
+        return {
+          ...old,
+          front_attachments: addLanguage(old.front_attachments),
+          back_attachments: addLanguage(old.back_attachments)
         };
       }
     }

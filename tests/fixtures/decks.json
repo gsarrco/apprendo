@@ -2,13 +2,11 @@
   {
     "id": "EBqpL9-yNEHgQpfGyvZ4O",
     "name": "Italian Vocabulary",
-    "language": {"qid": "Q652", "code": "ita", "label": "Italian"},
     "createdAt": 1784369956908
   },
   {
     "id": "YF7S8e_YlbVzvDXNsl6sQ",
     "name": "Dutch Nouns",
-    "language": {"qid": "Q7411", "code": "nld", "label": "Dutch"},
     "createdAt": 1783261220070
   }
 ]

@@ -4,35 +4,28 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Checkbox, Dropdown, DropdownItem } from 'flowbite-react';
 import { Plus, Trash2 } from 'lucide-react';
 import { getDb } from '../db';
-import type { Deck, Language } from '../types';
-import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
+import type { Deck } from '../types';
 import { btnGhost, btnPrimary, inputClass } from '../components/ui';
 import { useToast } from '../hooks/useToast';
 import { useDecks } from '../hooks/useDecks';
 
 function DeckForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
-  const [languageQid, setLanguageQid] = useState('');
   const { notify } = useToast();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    const language: Language | null = languageQid
-      ? LANG_BY_QID[languageQid] ?? null
-      : null;
     const deck: Deck = {
       id: nanoid(),
       name: trimmed,
-      language,
       createdAt: Date.now()
     };
     try {
       const db = await getDb();
       await db.decks.insert(deck);
       setName('');
-      setLanguageQid('');
       onDone();
     } catch (err) {
       notify(`Could not create deck: ${err instanceof Error ? err.message : String(err)}`);
@@ -49,19 +42,6 @@ function DeckForm({ onDone }: { onDone: () => void }) {
         autoFocus
         className={inputClass}
       />
-      <select
-        value={languageQid}
-        onChange={(e) => setLanguageQid(e.target.value)}
-        className={inputClass}
-        aria-label="Deck language"
-      >
-        <option value="">No language</option>
-        {LANGUAGES.map((l) => (
-          <option key={l.qid} value={l.qid}>
-            {l.label}
-          </option>
-        ))}
-      </select>
       <button type="submit" className={btnPrimary}>
         Add deck
       </button>
