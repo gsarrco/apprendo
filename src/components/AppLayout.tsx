@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { InstallButton } from './InstallButton';
 import { IosInstallHint } from './IosInstallHint';
 import { ThemeToggle } from './ThemeToggle';
+import { ErrorBoundary } from './ErrorBoundary';
 
 function RouteFallback() {
   return (
@@ -31,9 +32,11 @@ export function Layout() {
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-5 py-10">
-        <Suspense fallback={<RouteFallback />}>
-          <Outlet />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<RouteFallback />}>
+            <Outlet />
+          </Suspense>
+        </ErrorBoundary>
       </main>
       <IosInstallHint />
     </div>

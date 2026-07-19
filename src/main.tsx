@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import './styles.css';
 import App from './App.tsx';
 import { getDb } from './db';
+import { reloadOnce, clearReloadGuardAfter } from './lib/reloadOnce';
+
+window.addEventListener('vite:preloadError', reloadOnce);
 
 if (import.meta.env.DEV) {
   getDb()
@@ -36,3 +39,7 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>
 );
+
+// Give any chunk failures triggered by this same boot a chance to be
+// deduped by the guard before allowing a future incident to reload again.
+clearReloadGuardAfter(5000);
