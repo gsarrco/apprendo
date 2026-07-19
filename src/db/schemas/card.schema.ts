@@ -1,7 +1,7 @@
 import { attachmentListProperty } from './attachment.schema';
 
 export const cardSchema = {
-  version: 6,
+  version: 7,
   primaryKey: 'id',
   type: 'object',
   properties: {

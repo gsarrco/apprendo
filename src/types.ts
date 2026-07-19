@@ -19,7 +19,7 @@ export interface CardAttachment {
   url: string;
   caption: string;
   attribution: string | null;
-  language: Language | null;
+  language_qid: string | null;
   createdAt: number;
 }
 

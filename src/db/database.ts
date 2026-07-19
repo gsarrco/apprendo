@@ -56,7 +56,7 @@ export const appCollections = {
           urlKey: string,
           attrKey: string,
           type: AttachmentType
-        ): CardAttachment | null =>
+        ): Record<string, unknown> | null =>
           old[urlKey] != null
             ? {
                 type,
@@ -105,17 +105,36 @@ export const appCollections = {
         };
       },
       6: (old: Record<string, unknown>) => {
-        const addLanguage = (list: unknown): CardAttachment[] =>
+        const addLanguage = (list: unknown): Record<string, unknown>[] =>
           Array.isArray(list)
             ? list.map((item) => ({
-                ...(item as CardAttachment),
-                language: (item as CardAttachment).language ?? null
+                ...(item as Record<string, unknown>),
+                language: (item as Record<string, unknown>).language ?? null
               }))
             : [];
         return {
           ...old,
           front_attachments: addLanguage(old.front_attachments),
           back_attachments: addLanguage(old.back_attachments)
+        };
+      },
+      7: (old: Record<string, unknown>) => {
+        const toLanguageQid = (list: unknown): CardAttachment[] =>
+          Array.isArray(list)
+            ? list.map((item) => {
+                const { language, ...rest } = item as CardAttachment & {
+                  language?: { qid: string } | null;
+                };
+                return {
+                  ...rest,
+                  language_qid: language?.qid ?? null
+                } as CardAttachment;
+              })
+            : [];
+        return {
+          ...old,
+          front_attachments: toLanguageQid(old.front_attachments),
+          back_attachments: toLanguageQid(old.back_attachments)
         };
       }
     }

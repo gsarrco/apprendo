@@ -5,18 +5,10 @@ export const attachmentItemProperty = {
     url: { type: 'string' },
     caption: { type: 'string' },
     attribution: { type: ['string', 'null'] },
-    language: {
-      type: ['object', 'null'],
-      properties: {
-        qid: { type: 'string', maxLength: 12 },
-        code: { type: 'string', maxLength: 3 },
-        label: { type: 'string', maxLength: 40 }
-      },
-      required: ['qid', 'code', 'label']
-    },
+    language_qid: { type: ['string', 'null'], maxLength: 12 },
     createdAt: { type: 'number' }
   },
-  required: ['type', 'url', 'caption', 'attribution', 'language', 'createdAt']
+  required: ['type', 'url', 'caption', 'attribution', 'language_qid', 'createdAt']
 } as const;
 
 export const attachmentListProperty = {

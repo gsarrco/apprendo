@@ -8,6 +8,7 @@ import { useToast } from '../hooks/useToast';
 import { MediaSearch } from './MediaSearch';
 import { btnPrimary, btnSecondary, inputClass } from './ui';
 import { TextAlignStart, AudioLines, Image as ImageIcon } from 'lucide-react';
+import { LANG_BY_QID } from '../integrations/languages';
 
 type SideTab = 'text' | 'pronunciation' | 'image';
 
@@ -24,7 +25,8 @@ function sideDefaultTab(a: CardAttachment[]): SideTab {
 }
 
 function sideAudioLanguage(a: CardAttachment[]): Language | null {
-  return a.find((x) => x.type === 'audio')?.language ?? null;
+  const qid = a.find((x) => x.type === 'audio')?.language_qid;
+  return qid ? LANG_BY_QID[qid] ?? null : null;
 }
 
 function CardSideEditor({
