@@ -7,11 +7,8 @@ export function PwaUpdatePrompt() {
   const updateSWRef = useRef<
     ((reloadPage?: boolean) => Promise<void>) | null
   >(null);
-  const registeredRef = useRef(false);
 
   useEffect(() => {
-    if (registeredRef.current) return;
-    registeredRef.current = true;
     updateSWRef.current = registerSW({
       immediate: true,
       onNeedRefresh() {
