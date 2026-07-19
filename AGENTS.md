@@ -19,6 +19,21 @@ npm run lint && npx tsc -b && npm run build
 If wiring up the dev server to sanity-check, start and stop it
 (`npm run dev` serves on http://localhost:5173).
 
+## E2E tests
+
+Playwright, in `tests/e2e/`. Run with:
+
+```bash
+npm run test:e2e
+```
+
+This builds against `npm run preview` (port 4173) via the `webServer`
+block in `playwright.config.ts`, so a production build is exercised,
+not the dev server — rebuild first (`npm run build`) if source has
+changed since the last build. Runs across three device projects:
+Desktop Chrome, Mobile Android (Pixel 9), and Mobile Safari (iPhone
+16).
+
 ## Styling conventions
 
 - Use Tailwind utility classes directly in JSX. Do not add custom CSS.
