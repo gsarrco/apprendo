@@ -39,9 +39,9 @@ export function MediaSearch({
     try {
       const media =
         type === 'image'
-          ? await searchCommonsImages(q, 3)
+          ? await searchCommonsImages(q, 10)
           : language
-            ? await searchCommonsAudio(q, language, 3)
+            ? await searchCommonsAudio(q, language, 10)
             : [];
       setResults(media);
     } catch (err) {
@@ -119,7 +119,7 @@ export function MediaSearch({
         </div>
       ) : null}
       {!loading && results.length > 0 ? (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex gap-2 overflow-x-auto">
           {results.map((t) => {
             const isSelected = selected.some((s) => s.url === t.url);
             return (
@@ -127,7 +127,7 @@ export function MediaSearch({
                 key={t.url}
                 type="button"
                 onClick={() => toggle(t)}
-                className={`relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 p-2 text-center transition ${
+                className={`relative flex aspect-square w-[calc((100%-1rem)/3)] shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 p-2 text-center transition ${
                   isSelected
                     ? 'border-indigo-500 ring-2 ring-indigo-500/30'
                     : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'
@@ -137,6 +137,7 @@ export function MediaSearch({
                   <img
                     src={t.url}
                     alt=""
+                    loading="lazy"
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                 ) : (
