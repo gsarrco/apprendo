@@ -20,6 +20,7 @@ export interface CardAttachment {
   caption: string;
   attribution: string | null;
   language_qid: string | null;
+  blob_content: string | null;
   createdAt: number;
 }
 

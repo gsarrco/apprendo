@@ -16,6 +16,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Volume2 } from 'lucide-react';
 import type { CardAttachment } from '../types';
 import { playAudio } from '../lib/commonsThumb';
+import { attachmentSrc } from '../lib/attachments';
 import { DeleteButton } from './DeleteButton';
 
 interface AttachmentTrayProps {
@@ -63,13 +64,13 @@ function TrayTile({ item, onRemove }: TrayTileProps) {
         aria-label={item.type === 'audio' ? 'Play audio' : 'View attachment'}
         onClick={(e) => {
           e.stopPropagation();
-          if (item.type === 'audio') playAudio(item.url);
+          if (item.type === 'audio') playAudio(attachmentSrc(item));
         }}
         className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md"
       >
         {item.type === 'image' ? (
           <img
-            src={item.url}
+            src={attachmentSrc(item)}
             alt=""
             className="h-full w-full object-cover"
           />

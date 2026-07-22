@@ -69,6 +69,7 @@ export function MediaSearch({
         caption: captionFromTitle(m.title, type),
         attribution: toThumb(m).attribution ?? null,
         language_qid: type === 'audio' ? language?.qid ?? null : null,
+        blob_content: null,
         createdAt: Date.now()
       }
     ]);

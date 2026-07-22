@@ -18,6 +18,7 @@ import {
   AttachmentImageGrid
 } from './Attachments';
 import { btnPrimary, btnSecondary } from './ui';
+import { attachmentSrc } from '../lib/attachments';
 import { useToast } from '../hooks/useToast';
 
 const LEARN_AHEAD_MS = 30_000;
@@ -93,7 +94,7 @@ export function StudySessionCore({
       audioRef.current.pause();
       audioRef.current = null;
     }
-    const audio = new Audio(audios[playIndex].url);
+    const audio = new Audio(attachmentSrc(audios[playIndex]));
     audioRef.current = audio;
     audio.addEventListener('ended', () => {
       if (playIndex + 1 < audios.length) setPlayIndex(playIndex + 1);

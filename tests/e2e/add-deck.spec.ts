@@ -5,6 +5,7 @@ test('adds a new deck and it persists', async ({ page }) => {
 
   await page.goto('/');
 
+  await page.getByRole('button', { name: 'New deck' }).click();
   const input = page.getByPlaceholder('New deck name…');
   await input.fill(deckName);
 
@@ -14,7 +15,7 @@ test('adds a new deck and it persists', async ({ page }) => {
 
   const deckLink = page.getByRole('link', { name: new RegExp(deckName) });
   await expect(deckLink).toBeVisible();
-  await expect(input).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'New deck' })).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole('link', { name: new RegExp(deckName) })).toBeVisible();

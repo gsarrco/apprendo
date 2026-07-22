@@ -10,6 +10,7 @@ import { DeleteButton } from '../components/DeleteButton';
 import { CardStateBadge } from '../components/CardStateBadge';
 import { AttachmentAudioButtons, AttachmentThumbnails } from '../components/Attachments';
 import { playAudio } from '../lib/commonsThumb';
+import { attachmentSrc } from '../lib/attachments';
 import { CardForm } from '../components/AddEditCard';
 
 function CardList({ deckId }: { deckId: string }) {
@@ -69,7 +70,7 @@ function CardList({ deckId }: { deckId: string }) {
                   {card.front}
                   <AttachmentAudioButtons
                     attachments={card.front_attachments}
-                    onPlay={(i) => playAudio(card.front_attachments.filter((a) => a.type === 'audio')[i].url)}
+                    onPlay={(i) => playAudio(attachmentSrc(card.front_attachments.filter((a) => a.type === 'audio')[i]))}
                   />
                 </div>
                 <AttachmentThumbnails attachments={card.back_attachments} />
@@ -77,7 +78,7 @@ function CardList({ deckId }: { deckId: string }) {
                   <span>{card.back}</span>
                   <AttachmentAudioButtons
                     attachments={card.back_attachments}
-                    onPlay={(i) => playAudio(card.back_attachments.filter((a) => a.type === 'audio')[i].url)}
+                    onPlay={(i) => playAudio(attachmentSrc(card.back_attachments.filter((a) => a.type === 'audio')[i]))}
                   />
                 </div>
               </div>

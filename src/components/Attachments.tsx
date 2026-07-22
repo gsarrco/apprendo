@@ -1,5 +1,6 @@
 import { Volume2 } from 'lucide-react';
 import type { CardAttachment } from '../types';
+import { attachmentSrc } from '../lib/attachments';
 
 export function AttachmentThumbnails({
   attachments
@@ -12,8 +13,8 @@ export function AttachmentThumbnails({
     <div className="grid w-fit grid-cols-2 gap-1">
       {images.slice(0, 4).map((a) => (
         <img
-          key={a.url}
-          src={a.url}
+          key={attachmentSrc(a)}
+          src={attachmentSrc(a)}
           alt=""
           onClick={(e) => e.stopPropagation()}
           className="h-12 w-12 rounded-lg object-cover"
@@ -41,8 +42,8 @@ export function AttachmentImageGrid({
     >
       {images.map((a) => (
         <img
-          key={a.url}
-          src={a.url}
+          key={attachmentSrc(a)}
+          src={attachmentSrc(a)}
           alt=""
           className="max-h-[200px] w-full rounded-xl object-contain"
         />
@@ -65,7 +66,7 @@ export function AttachmentAudioButtons({
   const iconClass = size === 'md' ? 'h-5 w-5' : 'h-4 w-4';
   return audio.map((a, i) => (
     <button
-      key={a.url}
+      key={attachmentSrc(a)}
       type="button"
       aria-label={`Play audio ${i + 1}`}
       onClick={(e) => {
@@ -89,7 +90,7 @@ export function AttachmentAttributions({
   return (
     <div className="space-y-0.5 text-[0.65rem] text-zinc-400 dark:text-zinc-500">
       {withAttr.map((a) => (
-        <div key={a.url}>{a.attribution}</div>
+        <div key={attachmentSrc(a)}>{a.attribution}</div>
       ))}
     </div>
   );

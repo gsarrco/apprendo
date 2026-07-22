@@ -136,6 +136,20 @@ export const appCollections = {
           front_attachments: toLanguageQid(old.front_attachments),
           back_attachments: toLanguageQid(old.back_attachments)
         };
+      },
+      8: (old: Record<string, unknown>) => {
+        const addBlobContent = (list: unknown): CardAttachment[] =>
+          Array.isArray(list)
+            ? list.map((item) => ({
+                ...(item as CardAttachment),
+                blob_content: (item as CardAttachment).blob_content ?? null
+              }))
+            : [];
+        return {
+          ...old,
+          front_attachments: addBlobContent(old.front_attachments),
+          back_attachments: addBlobContent(old.back_attachments)
+        };
       }
     }
   },
