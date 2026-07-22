@@ -35,7 +35,11 @@ export const appCollections = {
         const rest = { ...oldDoc };
         delete rest.language;
         return rest;
-      }
+      },
+      3: (oldDoc: Record<string, unknown>) => ({
+        ...oldDoc,
+        keep_attachments_offline: false
+      })
     }
   },
   cards: {

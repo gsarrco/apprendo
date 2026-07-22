@@ -20,6 +20,7 @@ function DeckForm({ onDone }: { onDone: () => void }) {
     const deck: Deck = {
       id: nanoid(),
       name: trimmed,
+      keep_attachments_offline: false,
       createdAt: Date.now()
     };
     try {

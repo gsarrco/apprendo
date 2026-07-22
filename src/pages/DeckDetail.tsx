@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { Popover } from 'flowbite-react';
 import { getDb } from '../db';
 import type { CardDoc } from '../types';
 import { useCards } from '../hooks/useCards';
 import { useDeck } from '../hooks/useDecks';
+import { useToast } from '../hooks/useToast';
 import { btnPrimary, inputClass } from '../components/ui';
-import { Check } from 'lucide-react';
+import {
+  countPendingAttachments,
+  downloadDeckAttachments,
+  removeDeckBlobContent
+} from '../lib/offlineAttachments';
+import { Check, Info } from 'lucide-react';
 import { DeleteButton } from '../components/DeleteButton';
 import { CardStateBadge } from '../components/CardStateBadge';
 import { AttachmentAudioButtons, AttachmentThumbnails } from '../components/Attachments';
@@ -13,8 +20,7 @@ import { playAudio } from '../lib/commonsThumb';
 import { attachmentSrc } from '../lib/attachments';
 import { CardForm } from '../components/AddEditCard';
 
-function CardList({ deckId }: { deckId: string }) {
-  const cards = useCards(deckId);
+function CardList({ deckId, cards }: { deckId: string; cards: CardDoc[] }) {
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const editingCard: CardDoc | null = useMemo(
     () => cards.find((c) => c.id === editingCardId) ?? null,
@@ -115,9 +121,27 @@ function CardList({ deckId }: { deckId: string }) {
 export default function DeckDetail() {
   const { deckId } = useParams();
   const deck = useDeck(deckId ?? '');
+  const cards = useCards(deckId);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const { notify } = useToast();
+
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const downloadingRef = useRef(false);
+  const downloadRunRef = useRef<Promise<void> | null>(null);
+  const cancelCurrentRef = useRef<(() => void) | null>(null);
+  const unmountedRef = useRef(false);
+
+  const offlineEnabled = deck?.keep_attachments_offline ?? false;
+  const pendingCount = useMemo(() => countPendingAttachments(cards), [cards]);
+
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (editingName) {
@@ -126,7 +150,64 @@ export default function DeckDetail() {
     }
   }, [editingName, deck?.name]);
 
+  useEffect(() => {
+    if (!deckId || !offlineEnabled || pendingCount === 0 || downloadingRef.current) {
+      return;
+    }
+    downloadingRef.current = true;
+    let cancelled = false;
+    cancelCurrentRef.current = () => {
+      cancelled = true;
+    };
+    const total = pendingCount;
+    let done = 0;
+    downloadRunRef.current = (async () => {
+      const db = await getDb();
+      const deckDoc = await db.decks
+        .findOne({ selector: { id: deckId } })
+        .exec();
+      if (!deckDoc?.get('keep_attachments_offline')) return;
+      setProgress({ done, total });
+      await downloadDeckAttachments(
+        db,
+        deckId,
+        () => {
+          done += 1;
+          if (!unmountedRef.current) setProgress({ done, total });
+        },
+        () => cancelled || unmountedRef.current
+      );
+    })();
+    downloadRunRef.current
+      .catch((err) => {
+        if (!unmountedRef.current) {
+          notify(
+            `Could not download attachments: ${err instanceof Error ? err.message : String(err)}`
+          );
+        }
+      })
+      .finally(() => {
+        downloadingRef.current = false;
+        if (!unmountedRef.current) setProgress(null);
+      });
+  }, [deckId, offlineEnabled, pendingCount, notify]);
+
   if (!deckId) return <p>Missing deck.</p>;
+
+  async function toggleOffline() {
+    const db = await getDb();
+    const doc = await db.decks
+      .findOne({ selector: { id: deckId } })
+      .exec();
+    if (!doc) return;
+    const next = !doc.get('keep_attachments_offline');
+    await doc.patch({ keep_attachments_offline: next });
+    if (!next) {
+      cancelCurrentRef.current?.();
+      await downloadRunRef.current?.catch(() => {});
+      await removeDeckBlobContent(db, deckId!);
+    }
+  }
 
   async function saveName() {
     const trimmed = nameValue.trim();
@@ -146,7 +227,23 @@ export default function DeckDetail() {
 
   return (
     <div className="space-y-6">
-      <nav className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+      {progress ? (
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={progress.total}
+          aria-valuenow={progress.done}
+          aria-label="Downloading attachments"
+          className="h-2 w-full rounded-full bg-zinc-200 dark:bg-zinc-800"
+        >
+          <div
+            className="h-2 rounded-full bg-indigo-600 transition-all duration-300"
+            style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
+          />
+        </div>
+      ) : null}
+      <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500 dark:text-zinc-400">
+        <div className="flex items-center gap-1.5">
         <Link
           to="/"
           onClick={(e) => {
@@ -188,13 +285,45 @@ export default function DeckDetail() {
             {deck?.name ?? deckId.slice(0, 8)}
           </button>
         )}
+        </div>
+        <div className="ms-auto flex items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              checked={offlineEnabled}
+              onChange={toggleOffline}
+              className="peer sr-only"
+            />
+            <div className="peer relative h-5 w-9 rounded-full bg-zinc-300 after:absolute after:start-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-indigo-600 peer-checked:after:translate-x-full peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/30 dark:bg-zinc-700 rtl:peer-checked:after:-translate-x-full" />
+            <span className="ms-3 select-none text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Save attachments
+            </span>
+          </label>
+          <Popover
+            trigger="click"
+            placement="bottom-end"
+            content={
+              <div className="w-72 p-3 text-sm text-zinc-600 dark:text-zinc-300">
+                Downloads all Commons attachments, current and future, so you
+                can study without an internet connection.
+              </div>
+            }
+          >
+            <button type="button" aria-label="Show information">
+              <Info
+                className="h-4 w-4 text-zinc-400 transition hover:text-zinc-600 dark:hover:text-zinc-200"
+                aria-hidden="true"
+              />
+            </button>
+          </Popover>
+        </div>
       </nav>
       <div className="flex flex-wrap items-center gap-4">
         <Link to={`/study?decks=${deckId}`} className={btnPrimary}>
           Study now
         </Link>
       </div>
-      <CardList deckId={deckId} />
+      <CardList deckId={deckId} cards={cards} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ export interface Language {
 export interface Deck {
   id: string;
   name: string;
+  keep_attachments_offline: boolean;
   createdAt: number;
 }
 

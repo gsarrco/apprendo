@@ -40,4 +40,39 @@ test.describe('Deck detail view', () => {
     await page.goto(`/study?decks=${dutchDeck.id}`);
     await expect(page.locator(`img[src^="data:image/"]`).first()).toBeVisible();
   });
+
+  test('keep-offline toggle downloads blobs and removes them when disabled', async ({ page }) => {
+    const tinyPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64'
+    );
+    await page.route('https://upload.wikimedia.org/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'image/png', body: tinyPng })
+    );
+
+    const dutchDeck = decks.find((d) => d.name === 'Dutch Nouns')!;
+    await page.goto(`/deck/${dutchDeck.id}`);
+
+    const label = page.getByText('Keep Commons attachments offline');
+    await expect(label).toBeVisible();
+    await expect(page.locator('li img[src^="data:"]')).toHaveCount(1);
+
+    await label.click();
+    await expect(page.locator('li img[src^="data:"]')).toHaveCount(8, { timeout: 15000 });
+
+    await label.click();
+    await expect(page.locator('li img[src^="data:"]')).toHaveCount(0);
+  });
+
+  test('keep-offline toggle has an explanatory popover', async ({ page }) => {
+    const dutchDeck = decks.find((d) => d.name === 'Dutch Nouns')!;
+    await page.goto(`/deck/${dutchDeck.id}`);
+
+    await page.getByRole('button', { name: 'Show information' }).click();
+    await expect(
+      page.getByText(
+        'This option will download all the Commons attachments you added and future ones offline so no need for internet to study'
+      )
+    ).toBeVisible();
+  });
 });

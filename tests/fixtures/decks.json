@@ -2,11 +2,13 @@
   {
     "id": "EBqpL9-yNEHgQpfGyvZ4O",
     "name": "Italian Vocabulary",
-    "createdAt": 1784369956908
+    "createdAt": 1784369956908,
+    "keep_attachments_offline": false
   },
   {
     "id": "YF7S8e_YlbVzvDXNsl6sQ",
     "name": "Dutch Nouns",
-    "createdAt": 1783261220070
+    "createdAt": 1783261220070,
+    "keep_attachments_offline": false
   }
 ]
