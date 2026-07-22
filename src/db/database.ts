@@ -150,7 +150,8 @@ export const appCollections = {
           front_attachments: addBlobContent(old.front_attachments),
           back_attachments: addBlobContent(old.back_attachments)
         };
-      }
+      },
+      9: (old: Record<string, unknown>) => old
     }
   },
   reviewlogs: { schema: reviewLogSchema }

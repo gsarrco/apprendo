@@ -32,11 +32,35 @@ test.describe('Add/edit card side defaults', () => {
     const front = page.locator('section', { has: page.getByRole('heading', { name: 'Front', level: 2 }) });
     const back = page.locator('section', { has: page.getByRole('heading', { name: 'Back', level: 2 }) });
 
-    await expect(front.getByRole('button', { name: 'Image' })).toHaveAttribute('aria-current', 'page');
+    await expect(front.getByRole('button', { name: 'Image', exact: true })).toHaveAttribute('aria-current', 'page');
     await expect(back.getByRole('button', { name: 'Pronunciation' })).toHaveAttribute('aria-current', 'page');
 
     const languageSelect = back.getByRole('combobox');
     await expect(languageSelect).toHaveValue(dutch.qid);
     await expect(languageSelect).toContainText(dutch.label);
+  });
+
+  test('uploads an own image stored as blob_content', async ({ page }) => {
+    test.skip(
+      !test.info().project.name.includes('Desktop'),
+      'tab interactions rely on the desktop tab bar markup'
+    );
+
+    const deckId = decks.find((d) => d.name === 'Dutch Nouns')!.id;
+    await page.goto(`/deck/${deckId}`);
+
+    const front = page.locator('section', { has: page.getByRole('heading', { name: 'Front', level: 2 }) });
+    await expect(front.getByRole('button', { name: 'Image', exact: true })).toHaveAttribute('aria-current', 'page');
+
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64'
+    );
+    await front
+      .locator('input[type="file"]')
+      .setInputFiles({ name: 'my-photo.png', mimeType: 'image/png', buffer: png });
+
+    await expect(front.locator('img[src^="data:image/png"]')).toBeVisible();
+    await expect(front.getByText('my-photo')).toBeVisible();
   });
 });

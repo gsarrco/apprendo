@@ -2,7 +2,7 @@ export const attachmentItemProperty = {
   type: 'object',
   properties: {
     type: { type: 'string', enum: ['image', 'audio'] },
-    url: { type: 'string' },
+    url: { type: ['string', 'null'] },
     caption: { type: 'string' },
     attribution: { type: ['string', 'null'] },
     language_qid: { type: ['string', 'null'], maxLength: 12 },

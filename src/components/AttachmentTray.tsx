@@ -37,7 +37,7 @@ function TrayTile({ item, onRemove }: TrayTileProps) {
     transform,
     transition,
     isDragging
-  } = useSortable({ id: item.url });
+  } = useSortable({ id: attachmentSrc(item) });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -100,8 +100,8 @@ export function AttachmentTray({ items, onChange }: AttachmentTrayProps) {
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = items.findIndex((i) => i.url === active.id);
-    const newIndex = items.findIndex((i) => i.url === over.id);
+    const oldIndex = items.findIndex((i) => attachmentSrc(i) === active.id);
+    const newIndex = items.findIndex((i) => attachmentSrc(i) === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
     onChange(arrayMove(items, oldIndex, newIndex));
   }
@@ -112,14 +112,14 @@ export function AttachmentTray({ items, onChange }: AttachmentTrayProps) {
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={items.map((i) => i.url)} strategy={rectSortingStrategy}>
+      <SortableContext items={items.map((i) => attachmentSrc(i))} strategy={rectSortingStrategy}>
         <div className="flex flex-wrap gap-1">
           {items.map((item) => (
             <TrayTile
-              key={item.url}
+              key={attachmentSrc(item)}
               item={item}
               onRemove={() =>
-                onChange(items.filter((x) => x.url !== item.url))
+                onChange(items.filter((x) => attachmentSrc(x) !== attachmentSrc(item)))
               }
             />
           ))}
