@@ -10,6 +10,7 @@ test('shows an error toast when the database fails to initialize', async ({ page
 
   await page.goto('/');
 
+  await page.getByRole('button', { name: 'New deck' }).click();
   const input = page.getByPlaceholder('New deck name…');
   await input.fill('Deck that will fail');
   await page.getByRole('button', { name: 'Add deck' }).click();

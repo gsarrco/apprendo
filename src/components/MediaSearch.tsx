@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Check, Volume2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Check, Upload, Volume2 } from 'lucide-react';
 import {
   searchCommonsImages,
   searchCommonsAudio,
@@ -8,7 +8,8 @@ import {
 import { toThumb, captionFromTitle, playAudio } from '../lib/commonsThumb';
 import type { AttachmentType, CardAttachment, Language } from '../types';
 import { AttachmentTray } from './AttachmentTray';
-import { btnPrimary, inputClass } from './ui';
+import { attachmentSrc, blobToDataUrl } from '../lib/attachments';
+import { btnPrimary, btnSecondary, inputClass } from './ui';
 import { useToast } from '../hooks/useToast';
 import { LANGUAGES, LANG_BY_QID } from '../integrations/languages';
 
@@ -30,6 +31,35 @@ export function MediaSearch({
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<CommonsMedium[]>([]);
   const { notify } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    try {
+      const next = [...selected];
+      for (const file of Array.from(files)) {
+        const dataUrl = await blobToDataUrl(file);
+        if (next.some((s) => attachmentSrc(s) === dataUrl)) continue;
+        next.push({
+          type,
+          url: null,
+          caption: file.name.replace(/\.[^.]+$/, ''),
+          attribution: null,
+          language_qid: null,
+          blob_content: dataUrl,
+          createdAt: Date.now()
+        });
+      }
+      onChange(next);
+    } catch (err) {
+      notify(
+        `Could not read ${type}: ${err instanceof Error ? err.message : String(err)}`,
+        'info'
+      );
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
 
   async function runSearch() {
     const q = query.trim();
@@ -69,6 +99,7 @@ export function MediaSearch({
         caption: captionFromTitle(m.title, type),
         attribution: toThumb(m).attribution ?? null,
         language_qid: type === 'audio' ? language?.qid ?? null : null,
+        blob_content: null,
         createdAt: Date.now()
       }
     ]);
@@ -112,6 +143,25 @@ export function MediaSearch({
           className={`${btnPrimary} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           Search
+        </button>
+      </div>
+      <div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={type === 'image' ? 'image/*' : 'audio/*'}
+          multiple
+          onChange={(e) => handleFiles(e.target.files)}
+          className="hidden"
+          aria-label={`Upload your own ${type}`}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className={`${btnSecondary} rounded-lg px-1.5 py-0.5 text-[11px]`}
+        >
+          <Upload className="mr-1 h-2.5 w-2.5" aria-hidden="true" />
+          Upload your own {type}
         </button>
       </div>
       {loading ? (

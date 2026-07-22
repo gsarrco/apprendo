@@ -9,6 +9,7 @@ export interface Language {
 export interface Deck {
   id: string;
   name: string;
+  keep_attachments_offline: boolean;
   createdAt: number;
 }
 
@@ -16,10 +17,11 @@ export type AttachmentType = 'image' | 'audio';
 
 export interface CardAttachment {
   type: AttachmentType;
-  url: string;
+  url: string | null;
   caption: string;
   attribution: string | null;
   language_qid: string | null;
+  blob_content: string | null;
   createdAt: number;
 }
 

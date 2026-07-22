@@ -31,7 +31,8 @@
         "attribution": "Arild Vågen — CC BY-SA 3.0",
         "createdAt": 1783264312292,
         "caption": "",
-        "language_qid": null
+        "language_qid": null,
+        "blob_content": null
       }
     ],
     "back_attachments": [],
@@ -60,7 +61,8 @@
         "attribution": "Roger Culos — CC BY-SA 4.0",
         "createdAt": 1783261265805,
         "caption": "",
-        "language_qid": null
+        "language_qid": null,
+        "blob_content": null
       }
     ],
     "back_attachments": [
@@ -70,7 +72,8 @@
         "attribution": "Speaker: Robin van der Vliet\nRecorder: Robin van der Vliet — CC BY-SA 4.0",
         "createdAt": 1783261265805,
         "caption": "",
-        "language_qid": "Q7411"
+        "language_qid": "Q7411",
+        "blob_content": null
       }
     ],
     "createdAt": 1783261265805,
@@ -98,7 +101,8 @@
         "caption": "Gallirallus philippensis MHNT.ZOO.2010.11.69.7",
         "attribution": "Roger Culos — CC BY-SA 4.0",
         "createdAt": 1783847717171,
-        "language_qid": null
+        "language_qid": null,
+        "blob_content": null
       }
     ],
     "back_attachments": [
@@ -108,7 +112,8 @@
         "caption": "Dolon Prova at Mymensingh Photowalk",
         "attribution": "Anup Sadi — CC BY-SA 4.0",
         "createdAt": 1783847724526,
-        "language_qid": null
+        "language_qid": null,
+        "blob_content": null
       }
     ],
     "createdAt": 1783847725929,
@@ -136,7 +141,8 @@
         "caption": "Gallirallus philippensis MHNT.ZOO.2010.11.69.7",
         "attribution": "Roger Culos — CC BY-SA 4.0",
         "createdAt": 1783847611584,
-        "language_qid": null
+        "language_qid": null,
+        "blob_content": null
       }
     ],
     "back_attachments": [
@@ -146,7 +152,8 @@
         "caption": "Thalassarche bulleri in flight 1 - SE Tasmania",
         "attribution": "JJ Harrison (https://www.jjharrison.com.au/) — CC BY-SA 3.0",
         "createdAt": 1783847624212,
-        "language_qid": null
+        "language_qid": null,
+        "blob_content": null
       }
     ],
     "createdAt": 1783847625045,
@@ -174,7 +181,8 @@
         "attribution": "Von.grzanka — CC BY-SA 3.0",
         "createdAt": 1783266211479,
         "caption": "",
-        "language_qid": null
+        "language_qid": null,
+        "blob_content": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
       },
       {
         "type": "image",
@@ -182,7 +190,8 @@
         "attribution": "Brian Kernighan — CC BY-SA 3.0",
         "createdAt": 1783266220203,
         "caption": "",
-        "language_qid": null
+        "language_qid": null,
+        "blob_content": null
       }
     ],
     "back_attachments": [
@@ -192,7 +201,8 @@
         "attribution": "Speaker: Robin van der Vliet\nRecorder: Robin van der Vliet — CC BY-SA 4.0",
         "createdAt": 1783266224538,
         "caption": "",
-        "language_qid": "Q7411"
+        "language_qid": "Q7411",
+        "blob_content": null
       },
       {
         "type": "audio",
@@ -200,7 +210,8 @@
         "attribution": "Speaker: Robin van der Vliet\nRecorder: Robin van der Vliet — CC BY-SA 4.0",
         "createdAt": 1783266285454,
         "caption": "",
-        "language_qid": "Q7411"
+        "language_qid": "Q7411",
+        "blob_content": null
       }
     ],
     "createdAt": 1783266328304,
