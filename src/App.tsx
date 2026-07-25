@@ -5,6 +5,7 @@ import { ToastProvider } from './components/Toast';
 
 const DeckIndex = lazy(() => import('./pages/DeckIndex'));
 const DeckDetail = lazy(() => import('./pages/DeckDetail'));
+const TagDetail = lazy(() => import('./pages/TagDetail'));
 const MultiDeckStudySession = lazy(() => import('./pages/MultiDeckStudySession'));
 
 const router = createBrowserRouter([
@@ -14,6 +15,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DeckIndex /> },
       { path: 'deck/:deckId', element: <DeckDetail /> },
+      { path: 'tag/:tagId', element: <TagDetail /> },
       { path: 'study', element: <MultiDeckStudySession /> },
       { path: '*', element: <DeckIndex /> }
     ]

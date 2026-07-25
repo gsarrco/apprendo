@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { nanoid } from 'nanoid';
 import { Link, useNavigate } from 'react-router-dom';
 import { Checkbox, Dropdown, DropdownItem } from 'flowbite-react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { getDb } from '../db';
-import type { Deck } from '../types';
+import type { Deck, Tag } from '../types';
 import { btnGhost, btnPrimary, inputClass } from '../components/ui';
 import { useToast } from '../hooks/useToast';
 import { useDecks } from '../hooks/useDecks';
+import { useTags } from '../hooks/useTags';
 
 function DeckForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
@@ -50,6 +51,75 @@ function DeckForm({ onDone }: { onDone: () => void }) {
         Cancel
       </button>
     </form>
+  );
+}
+
+function NewTagButton() {
+  const navigate = useNavigate();
+  const { notify } = useToast();
+
+  async function addTag() {
+    const tag: Tag = {
+      id: nanoid(),
+      name: '',
+      deckIds: [],
+      createdAt: Date.now()
+    };
+    try {
+      const db = await getDb();
+      await db.tags.insert(tag);
+      navigate(`/tag/${tag.id}`);
+    } catch (err) {
+      notify(`Could not create tag: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  return (
+    <button type="button" className={btnGhost} onClick={addTag}>
+      <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+      New tag
+    </button>
+  );
+}
+
+function TagCarousel() {
+  const tags = useTags();
+  const navigate = useNavigate();
+  const sorted = [...tags].sort((a, b) => a.createdAt - b.createdAt);
+
+  if (sorted.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      {sorted.map((tag) => (
+        <div key={tag.id} className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => navigate(`/study?tag=${tag.id}`)}
+            className="flex h-12 min-w-44 items-center rounded-xl border border-zinc-200 bg-white pl-4 pr-12 text-sm font-medium text-zinc-900 shadow-sm transition hover:border-indigo-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-indigo-500"
+          >
+            <Play
+              className="mr-2 h-4 w-4 shrink-0 text-indigo-500"
+              aria-hidden="true"
+            />
+            <span className="max-w-48 truncate">
+              {tag.name || 'Untitled tag'}
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-label={`Edit ${tag.name || 'untitled tag'}`}
+            onClick={() => navigate(`/tag/${tag.id}`)}
+            className="absolute right-1 top-1 z-10 flex h-9 w-9 items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            <Pencil
+              className="h-4 w-4 text-zinc-500 dark:text-zinc-400"
+              aria-hidden="true"
+            />
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -115,15 +185,15 @@ function DeckList({ decks }: { decks: Deck[] }) {
             {selectedCount} selected
           </span>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className={btnPrimary}
-              onClick={() =>
-                navigate(`/study?decks=${[...selectedIds].join(',')}`)
-              }
-            >
-              Study now
-            </button>
+            {selectedCount === 1 && (
+              <button
+                type="button"
+                className={btnPrimary}
+                onClick={() => navigate(`/study?deck=${[...selectedIds][0]}`)}
+              >
+                Study now
+              </button>
+            )}
             <Dropdown
               color="gray"
               label="Action"
@@ -184,15 +254,19 @@ export default function DeckIndex() {
       {showForm ? (
         <DeckForm onDone={() => setShowForm(false)} />
       ) : (
-        <button
-          type="button"
-          className={btnGhost}
-          onClick={() => setShowForm(true)}
-        >
-          <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-          New deck
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className={btnGhost}
+            onClick={() => setShowForm(true)}
+          >
+            <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            New deck
+          </button>
+          <NewTagButton />
+        </div>
       )}
+      <TagCarousel />
       <DeckList decks={decks} />
     </section>
   );

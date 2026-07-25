@@ -37,7 +37,7 @@ test.describe('Deck detail view', () => {
     await page.goto(`/deck/${dutchDeck.id}`);
     await expect(page.locator(`img[src="${blob}"]`).first()).toBeVisible();
 
-    await page.goto(`/study?decks=${dutchDeck.id}`);
+    await page.goto(`/study?deck=${dutchDeck.id}`);
     await expect(page.locator(`img[src^="data:image/"]`).first()).toBeVisible();
   });
 

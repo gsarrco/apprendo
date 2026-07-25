@@ -13,6 +13,13 @@ export interface Deck {
   createdAt: number;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  deckIds: string[];
+  createdAt: number;
+}
+
 export type AttachmentType = 'image' | 'audio';
 
 export interface CardAttachment {

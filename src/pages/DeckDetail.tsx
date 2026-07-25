@@ -319,7 +319,7 @@ export default function DeckDetail() {
         </div>
       </nav>
       <div className="flex flex-wrap items-center gap-4">
-        <Link to={`/study?decks=${deckId}`} className={btnPrimary}>
+        <Link to={`/study?deck=${deckId}`} className={btnPrimary}>
           Study now
         </Link>
       </div>
