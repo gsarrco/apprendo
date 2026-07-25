@@ -248,7 +248,7 @@ export default function DeckIndex() {
       <div>
         <h2 className="text-xl font-bold tracking-tight">Decks</h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Create decks of flashcards and study them on a spaced-repetition schedule.
+          Create decks of flashcards and study them on a spaced-repetition schedule. Group some decks into study tags to study all of them at once.
         </p>
       </div>
       {showForm ? (
