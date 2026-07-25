@@ -53,7 +53,7 @@ test.describe('Deck detail view', () => {
     const dutchDeck = decks.find((d) => d.name === 'Dutch Nouns')!;
     await page.goto(`/deck/${dutchDeck.id}`);
 
-    const label = page.getByText('Keep Commons attachments offline');
+    const label = page.getByText('Save attachments');
     await expect(label).toBeVisible();
     await expect(page.locator('li img[src^="data:"]')).toHaveCount(1);
 
@@ -71,7 +71,7 @@ test.describe('Deck detail view', () => {
     await page.getByRole('button', { name: 'Show information' }).click();
     await expect(
       page.getByText(
-        'This option will download all the Commons attachments you added and future ones offline so no need for internet to study'
+        'Downloads all Commons attachments, current and future, so you can study without an internet connection.'
       )
     ).toBeVisible();
   });
