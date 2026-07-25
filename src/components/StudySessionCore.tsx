@@ -9,7 +9,7 @@ import { toFsrsCard, fromFsrsCard, fromFsrsLog } from '../fsrs/mappers';
 import { formatInterval } from '../lib/format';
 import { useDueCards } from '../hooks/useDueCards';
 import { useDecks } from '../hooks/useDecks';
-import type { CardDoc, Deck, Tag } from '../types';
+import type { CardDoc, Deck, StudyTag } from '../types';
 import { RatingButtons } from './RatingButtons';
 import { CardStateBadge } from './CardStateBadge';
 import {
@@ -25,7 +25,7 @@ const LEARN_AHEAD_MS = 30_000;
 
 type SessionEntry = { card: CardDoc; due: number };
 
-export type StudySource = { deckId: string } | { tag: Tag };
+export type StudySource = { deckId: string } | { studyTag: StudyTag };
 
 export function StudySessionCore({
   source,
@@ -36,9 +36,9 @@ export function StudySessionCore({
   exitTo: string;
   doneLinks: { label: string; to: string }[];
 }) {
-  const tag = 'tag' in source ? source.tag : undefined;
+  const studyTag = 'studyTag' in source ? source.studyTag : undefined;
   const deckIds = useMemo(
-    () => ('deckId' in source ? [source.deckId] : source.tag.deckIds),
+    () => ('deckId' in source ? [source.deckId] : source.studyTag.deckIds),
     [source]
   );
   const { cards, loaded } = useDueCards(deckIds);
@@ -296,7 +296,7 @@ export function StudySessionCore({
           {(() => {
             const deckName = deckById.get(current.deckId)?.name;
             if (!deckName) return null;
-            const label = tag ? `${tag.name}: ${deckName}` : deckName;
+            const label = studyTag ? `${studyTag.name}: ${deckName}` : deckName;
             return (
               <span className="rounded-full border border-indigo-400/60 px-2.5 py-0.5 text-[0.7rem] font-medium uppercase tracking-wider text-indigo-500">
                 <strong>{label}</strong>

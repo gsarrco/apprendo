@@ -3,7 +3,7 @@ import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 import { createAppDatabase, type AppDatabase } from './database';
-import type { CardDoc, Deck, ReviewLogDoc, Tag } from '../types';
+import type { CardDoc, Deck, ReviewLogDoc, StudyTag } from '../types';
 
 export * from './database';
 
@@ -11,7 +11,7 @@ type E2ESeeds = {
   decks: Deck[];
   cards: CardDoc[];
   reviewlogs: ReviewLogDoc[];
-  tags?: Tag[];
+  studyTags?: StudyTag[];
 };
 
 function readE2ESeeds(): E2ESeeds | null {
@@ -33,7 +33,7 @@ async function initDb(): Promise<AppDatabase> {
     await db.decks.bulkInsert(seeds.decks);
     await db.cards.bulkInsert(seeds.cards);
     await db.reviewlogs.bulkInsert(seeds.reviewlogs);
-    if (seeds.tags) await db.tags.bulkInsert(seeds.tags);
+    if (seeds.studyTags) await db.studytags.bulkInsert(seeds.studyTags);
     return db;
   }
   if (import.meta.env.DEV) addRxPlugin(RxDBDevModePlugin);

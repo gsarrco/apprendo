@@ -1,13 +1,13 @@
 import { useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { StudySessionCore } from '../components/StudySessionCore';
-import { useTag } from '../hooks/useTags';
+import { useStudyTag } from '../hooks/useStudyTags';
 
 export default function MultiDeckStudySession() {
   const [params] = useSearchParams();
   const deckId = params.get('deck') ?? undefined;
-  const tagId = params.get('tag') ?? undefined;
-  const { tag, loaded } = useTag(deckId ? undefined : tagId);
+  const studyTagId = params.get('studyTag') ?? undefined;
+  const { studyTag, loaded } = useStudyTag(deckId ? undefined : studyTagId);
 
   if (deckId) {
     return (
@@ -22,7 +22,7 @@ export default function MultiDeckStudySession() {
     );
   }
 
-  if (!tagId) return <p>No decks selected.</p>;
+  if (!studyTagId) return <p>No decks selected.</p>;
 
   if (!loaded) {
     return (
@@ -35,12 +35,13 @@ export default function MultiDeckStudySession() {
     );
   }
 
-  if (!tag) return <p>Tag not found.</p>;
-  if (tag.deckIds.length === 0) return <p>This tag has no decks yet.</p>;
+  if (!studyTag) return <p>Study tag not found.</p>;
+  if (studyTag.deckIds.length === 0)
+    return <p>This study tag has no decks yet.</p>;
 
   return (
     <StudySessionCore
-      source={{ tag }}
+      source={{ studyTag }}
       exitTo="/"
       doneLinks={[{ label: 'Decks', to: '/' }]}
     />

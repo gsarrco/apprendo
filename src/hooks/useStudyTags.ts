@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import type { Subscription } from 'rxjs';
 import { getDb } from '../db';
-import type { Tag } from '../types';
+import type { StudyTag } from '../types';
 
-export function useTags(): Tag[] {
-  const [tags, setTags] = useState<Tag[]>([]);
+export function useStudyTags(): StudyTag[] {
+  const [studyTags, setStudyTags] = useState<StudyTag[]>([]);
   useEffect(() => {
     let sub: Subscription | undefined;
     let active = true;
     getDb().then((db) => {
       if (!active) return;
-      sub = db.tags.find().$.subscribe((docs) => {
-        setTags(docs.map((d) => d.toJSON(true) as unknown as Tag));
+      sub = db.studytags.find().$.subscribe((docs) => {
+        setStudyTags(docs.map((d) => d.toJSON(true) as unknown as StudyTag));
       });
     });
     return () => {
@@ -19,18 +19,18 @@ export function useTags(): Tag[] {
       sub?.unsubscribe();
     };
   }, []);
-  return tags;
+  return studyTags;
 }
 
-export function useTag(tagId: string | undefined): {
-  tag: Tag | undefined;
+export function useStudyTag(studyTagId: string | undefined): {
+  studyTag: StudyTag | undefined;
   loaded: boolean;
 } {
-  const [tag, setTag] = useState<Tag | undefined>(undefined);
+  const [studyTag, setStudyTag] = useState<StudyTag | undefined>(undefined);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    if (!tagId) {
-      setTag(undefined);
+    if (!studyTagId) {
+      setStudyTag(undefined);
       setLoaded(true);
       return;
     }
@@ -39,12 +39,12 @@ export function useTag(tagId: string | undefined): {
     setLoaded(false);
     getDb().then((db) => {
       if (!active) return;
-      sub = db.tags
+      sub = db.studytags
         .findOne({
-          selector: { id: tagId }
+          selector: { id: studyTagId }
         })
         .$.subscribe((doc) => {
-          setTag(doc ? (doc.toJSON(true) as unknown as Tag) : undefined);
+          setStudyTag(doc ? (doc.toJSON(true) as unknown as StudyTag) : undefined);
           setLoaded(true);
         });
     });
@@ -52,6 +52,6 @@ export function useTag(tagId: string | undefined): {
       active = false;
       sub?.unsubscribe();
     };
-  }, [tagId]);
-  return { tag, loaded };
+  }, [studyTagId]);
+  return { studyTag, loaded };
 }

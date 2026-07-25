@@ -9,19 +9,19 @@ import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
 import { deckSchema } from './schemas/deck.schema';
 import { cardSchema } from './schemas/card.schema';
 import { reviewLogSchema } from './schemas/reviewLog.schema';
-import { tagSchema } from './schemas/tag.schema';
-import type { Deck, CardDoc, ReviewLogDoc, Tag, AttachmentType, CardAttachment } from '../types';
+import { studyTagSchema } from './schemas/studyTag.schema';
+import type { Deck, CardDoc, ReviewLogDoc, StudyTag, AttachmentType, CardAttachment } from '../types';
 
 export type DeckCollection = RxCollection<Deck>;
 export type CardCollection = RxCollection<CardDoc>;
 export type ReviewLogCollection = RxCollection<ReviewLogDoc>;
-export type TagCollection = RxCollection<Tag>;
+export type StudyTagCollection = RxCollection<StudyTag>;
 
 export type AppCollections = {
   decks: DeckCollection;
   cards: CardCollection;
   reviewlogs: ReviewLogCollection;
-  tags: TagCollection;
+  studytags: StudyTagCollection;
 };
 
 export type AppDatabase = RxDatabase<AppCollections>;
@@ -162,7 +162,7 @@ export const appCollections = {
     }
   },
   reviewlogs: { schema: reviewLogSchema },
-  tags: { schema: tagSchema }
+  studytags: { schema: studyTagSchema }
 };
 
 export type CreateAppDatabaseOptions = {

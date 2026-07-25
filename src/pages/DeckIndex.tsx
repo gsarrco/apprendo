@@ -4,11 +4,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Checkbox, Dropdown, DropdownItem } from 'flowbite-react';
 import { Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { getDb } from '../db';
-import type { Deck, Tag } from '../types';
+import type { Deck, StudyTag } from '../types';
 import { btnGhost, btnPrimary, inputClass } from '../components/ui';
 import { useToast } from '../hooks/useToast';
 import { useDecks } from '../hooks/useDecks';
-import { useTags } from '../hooks/useTags';
+import { useStudyTags } from '../hooks/useStudyTags';
 
 function DeckForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
@@ -54,12 +54,12 @@ function DeckForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function NewTagButton() {
+function NewStudyTagButton() {
   const navigate = useNavigate();
   const { notify } = useToast();
 
-  async function addTag() {
-    const tag: Tag = {
+  async function addStudyTag() {
+    const studyTag: StudyTag = {
       id: nanoid(),
       name: '',
       deckIds: [],
@@ -67,35 +67,35 @@ function NewTagButton() {
     };
     try {
       const db = await getDb();
-      await db.tags.insert(tag);
-      navigate(`/tag/${tag.id}`);
+      await db.studytags.insert(studyTag);
+      navigate(`/study-tag/${studyTag.id}`);
     } catch (err) {
-      notify(`Could not create tag: ${err instanceof Error ? err.message : String(err)}`);
+      notify(`Could not create study tag: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
   return (
-    <button type="button" className={btnGhost} onClick={addTag}>
+    <button type="button" className={btnGhost} onClick={addStudyTag}>
       <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-      New tag
+      New study tag
     </button>
   );
 }
 
-function TagCarousel() {
-  const tags = useTags();
+function StudyTagCarousel() {
+  const studyTags = useStudyTags();
   const navigate = useNavigate();
-  const sorted = [...tags].sort((a, b) => a.createdAt - b.createdAt);
+  const sorted = [...studyTags].sort((a, b) => a.createdAt - b.createdAt);
 
   if (sorted.length === 0) return null;
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-1">
-      {sorted.map((tag) => (
-        <div key={tag.id} className="relative shrink-0">
+      {sorted.map((studyTag) => (
+        <div key={studyTag.id} className="relative shrink-0">
           <button
             type="button"
-            onClick={() => navigate(`/study?tag=${tag.id}`)}
+            onClick={() => navigate(`/study?studyTag=${studyTag.id}`)}
             className="flex h-12 min-w-44 items-center rounded-xl border border-zinc-200 bg-white pl-4 pr-12 text-sm font-medium text-zinc-900 shadow-sm transition hover:border-indigo-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-indigo-500"
           >
             <Play
@@ -103,13 +103,13 @@ function TagCarousel() {
               aria-hidden="true"
             />
             <span className="max-w-48 truncate">
-              {tag.name || 'Untitled tag'}
+              {studyTag.name || 'Untitled study tag'}
             </span>
           </button>
           <button
             type="button"
-            aria-label={`Edit ${tag.name || 'untitled tag'}`}
-            onClick={() => navigate(`/tag/${tag.id}`)}
+            aria-label={`Edit ${studyTag.name || 'untitled study tag'}`}
+            onClick={() => navigate(`/study-tag/${studyTag.id}`)}
             className="absolute right-1 top-1 z-10 flex h-9 w-9 items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             <Pencil
@@ -263,10 +263,10 @@ export default function DeckIndex() {
             <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
             New deck
           </button>
-          <NewTagButton />
+          <NewStudyTagButton />
         </div>
       )}
-      <TagCarousel />
+      <StudyTagCarousel />
       <DeckList decks={decks} />
     </section>
   );

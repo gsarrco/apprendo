@@ -1,4 +1,4 @@
-export const tagSchema = {
+export const studyTagSchema = {
   version: 0,
   primaryKey: 'id',
   type: 'object',

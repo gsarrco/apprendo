@@ -13,7 +13,7 @@ export interface Deck {
   createdAt: number;
 }
 
-export interface Tag {
+export interface StudyTag {
   id: string;
   name: string;
   deckIds: string[];
