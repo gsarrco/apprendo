@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { Link, Outlet } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Dropdown, DropdownItem } from 'flowbite-react';
+import { Download, Loader2, Upload } from 'lucide-react';
 import { InstallButton } from './InstallButton';
 import { IosInstallHint } from './IosInstallHint';
 import { ThemeToggle } from './ThemeToggle';
@@ -26,6 +27,22 @@ export function Layout() {
             Apprendo
           </Link>
           <div className="flex items-center gap-1">
+            <Dropdown
+              inline
+              arrowIcon={false}
+              label={
+                <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100">
+                  <Download className="h-5 w-5" aria-hidden="true" />
+                </span>
+              }
+            >
+              <DropdownItem as={Link} to="/export" icon={Download}>
+                Export
+              </DropdownItem>
+              <DropdownItem as={Link} to="/import" icon={Upload}>
+                Import
+              </DropdownItem>
+            </Dropdown>
             <InstallButton />
             <ThemeToggle />
           </div>
