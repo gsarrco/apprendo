@@ -7,6 +7,8 @@ const DeckIndex = lazy(() => import('./pages/DeckIndex'));
 const DeckDetail = lazy(() => import('./pages/DeckDetail'));
 const StudyTagDetail = lazy(() => import('./pages/StudyTagDetail'));
 const MultiDeckStudySession = lazy(() => import('./pages/MultiDeckStudySession'));
+const Export = lazy(() => import('./pages/Export'));
+const Import = lazy(() => import('./pages/Import'));
 
 const router = createBrowserRouter([
   {
@@ -17,6 +19,8 @@ const router = createBrowserRouter([
       { path: 'deck/:deckId', element: <DeckDetail /> },
       { path: 'study-tag/:studyTagId', element: <StudyTagDetail /> },
       { path: 'study', element: <MultiDeckStudySession /> },
+      { path: 'export', element: <Export /> },
+      { path: 'import', element: <Import /> },
       { path: '*', element: <DeckIndex /> }
     ]
   }
