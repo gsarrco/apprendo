@@ -9,6 +9,7 @@ import { buildBackup, downloadBackup } from '../lib/backup';
 export default function Export() {
   const decks = useDecks();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [includeReviewLogs, setIncludeReviewLogs] = useState(true);
   const [exporting, setExporting] = useState(false);
   const { notify } = useToast();
 
@@ -35,7 +36,7 @@ export default function Export() {
     if (selectedIds.size === 0) return;
     setExporting(true);
     try {
-      const backup = await buildBackup([...selectedIds]);
+      const backup = await buildBackup([...selectedIds], { includeReviewLogs });
       downloadBackup(backup);
       notify('Export ready', 'success');
     } catch (err) {
@@ -51,7 +52,7 @@ export default function Export() {
         <h2 className="text-xl font-bold tracking-tight">Export</h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           Select the decks you want to back up. The export includes their cards,
-          attachments, review history, and any study tags that reference them.
+          attachments, and any study tags that reference them.
         </p>
       </div>
 
@@ -82,6 +83,17 @@ export default function Export() {
               </li>
             ))}
           </ul>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700 dark:text-zinc-200">
+            <Checkbox
+              checked={includeReviewLogs}
+              onChange={() => setIncludeReviewLogs((prev) => !prev)}
+            />
+            Include review history
+          </label>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            Turn off to share a deck with other learners without your personal
+            study progress.
+          </p>
           <button
             type="button"
             className={btnPrimary}

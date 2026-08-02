@@ -13,7 +13,15 @@ export interface BackupFile {
   studytags: StudyTag[];
 }
 
-export async function buildBackup(deckIds: string[]): Promise<BackupFile> {
+export interface BuildBackupOptions {
+  includeReviewLogs?: boolean;
+}
+
+export async function buildBackup(
+  deckIds: string[],
+  options: BuildBackupOptions = {}
+): Promise<BackupFile> {
+  const { includeReviewLogs = true } = options;
   const db = await getDb();
   const decks = (
     await db.decks.find({ selector: { id: { $in: deckIds } } }).exec()
@@ -24,15 +32,14 @@ export async function buildBackup(deckIds: string[]): Promise<BackupFile> {
   ).map((c) => c.toJSON() as unknown as CardDoc);
 
   const cardIds = cards.map((c) => c.id);
-  const reviewlogs = (
-    cardIds.length
+  const reviewlogs =
+    includeReviewLogs && cardIds.length
       ? (
           await db.reviewlogs
             .find({ selector: { cardId: { $in: cardIds } } })
             .exec()
         ).map((r) => r.toJSON() as unknown as ReviewLogDoc)
-      : []
-  );
+      : [];
 
   const studytags = (
     await db.studytags.find().exec()
