@@ -4,7 +4,7 @@ import { Download } from 'lucide-react';
 import { useDecks } from '../hooks/useDecks';
 import { useToast } from '../hooks/useToast';
 import { btnPrimary } from '../components/ui';
-import { buildBackup, downloadBackup } from '../lib/backup';
+import { buildExport, downloadExport } from '../lib/export';
 
 export default function Export() {
   const decks = useDecks();
@@ -36,8 +36,8 @@ export default function Export() {
     if (selectedIds.size === 0) return;
     setExporting(true);
     try {
-      const backup = await buildBackup([...selectedIds], { includeReviewLogs });
-      downloadBackup(backup);
+      const exportFile = await buildExport([...selectedIds], { includeReviewLogs });
+      downloadExport(exportFile);
       notify('Export ready', 'success');
     } catch (err) {
       notify(`Could not export: ${err instanceof Error ? err.message : String(err)}`);
@@ -51,7 +51,7 @@ export default function Export() {
       <div>
         <h2 className="text-xl font-bold tracking-tight">Export</h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Select the decks you want to back up. The export includes their cards,
+          Select the decks you want to export. The export includes their cards,
           attachments, and any study tags that reference them.
         </p>
       </div>

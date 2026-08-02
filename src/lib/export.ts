@@ -1,10 +1,10 @@
 import { getDb } from '../db';
 import type { CardDoc, Deck, ReviewLogDoc, StudyTag } from '../types';
 
-export const BACKUP_FORMAT_VERSION = 1;
+export const EXPORT_FORMAT_VERSION = 1;
 
-export interface BackupFile {
-  format: 'apprendo-backup';
+export interface ExportFile {
+  format: 'apprendo-export';
   version: number;
   exportedAt: number;
   decks: Deck[];
@@ -13,14 +13,14 @@ export interface BackupFile {
   studytags: StudyTag[];
 }
 
-export interface BuildBackupOptions {
+export interface BuildExportOptions {
   includeReviewLogs?: boolean;
 }
 
-export async function buildBackup(
+export async function buildExport(
   deckIds: string[],
-  options: BuildBackupOptions = {}
-): Promise<BackupFile> {
+  options: BuildExportOptions = {}
+): Promise<ExportFile> {
   const { includeReviewLogs = true } = options;
   const db = await getDb();
   const decks = (
@@ -48,8 +48,8 @@ export async function buildBackup(
     .filter((t) => t.deckIds.some((id) => deckIds.includes(id)));
 
   return {
-    format: 'apprendo-backup',
-    version: BACKUP_FORMAT_VERSION,
+    format: 'apprendo-export',
+    version: EXPORT_FORMAT_VERSION,
     exportedAt: Date.now(),
     decks,
     cards,
@@ -58,22 +58,22 @@ export async function buildBackup(
   };
 }
 
-export function downloadBackup(backup: BackupFile): void {
-  const blob = new Blob([JSON.stringify(backup)], {
+export function downloadExport(exportFile: ExportFile): void {
+  const blob = new Blob([JSON.stringify(exportFile)], {
     type: 'application/json'
   });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const date = new Date(backup.exportedAt).toISOString().slice(0, 10);
+  const date = new Date(exportFile.exportedAt).toISOString().slice(0, 10);
   a.href = url;
-  a.download = `apprendo-backup-${date}.json`;
+  a.download = `apprendo-export-${date}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
-export function parseBackup(text: string): BackupFile {
+export function parseExport(text: string): ExportFile {
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -83,21 +83,21 @@ export function parseBackup(text: string): BackupFile {
   if (
     typeof data !== 'object' ||
     data === null ||
-    (data as Record<string, unknown>).format !== 'apprendo-backup' ||
+    (data as Record<string, unknown>).format !== 'apprendo-export' ||
     !Array.isArray((data as Record<string, unknown>).decks) ||
     !Array.isArray((data as Record<string, unknown>).cards) ||
     !Array.isArray((data as Record<string, unknown>).reviewlogs) ||
     !Array.isArray((data as Record<string, unknown>).studytags)
   ) {
-    throw new Error('File is not a valid Apprendo backup');
+    throw new Error('File is not a valid Apprendo export');
   }
-  return data as BackupFile;
+  return data as ExportFile;
 }
 
-export async function restoreBackup(backup: BackupFile): Promise<void> {
+export async function restoreExport(exportFile: ExportFile): Promise<void> {
   const db = await getDb();
-  if (backup.decks.length) await db.decks.bulkUpsert(backup.decks);
-  if (backup.cards.length) await db.cards.bulkUpsert(backup.cards);
-  if (backup.reviewlogs.length) await db.reviewlogs.bulkUpsert(backup.reviewlogs);
-  if (backup.studytags.length) await db.studytags.bulkUpsert(backup.studytags);
+  if (exportFile.decks.length) await db.decks.bulkUpsert(exportFile.decks);
+  if (exportFile.cards.length) await db.cards.bulkUpsert(exportFile.cards);
+  if (exportFile.reviewlogs.length) await db.reviewlogs.bulkUpsert(exportFile.reviewlogs);
+  if (exportFile.studytags.length) await db.studytags.bulkUpsert(exportFile.studytags);
 }

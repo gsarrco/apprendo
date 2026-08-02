@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Upload } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { btnPrimary } from '../components/ui';
-import { parseBackup, restoreBackup } from '../lib/backup';
+import { parseExport, restoreExport } from '../lib/export';
 
 export default function Import() {
   const [importing, setImporting] = useState(false);
@@ -17,10 +17,10 @@ export default function Import() {
     setFileName(file.name);
     try {
       const text = await file.text();
-      const backup = parseBackup(text);
-      await restoreBackup(backup);
+      const exportFile = parseExport(text);
+      await restoreExport(exportFile);
       notify(
-        `Imported ${backup.decks.length} deck${backup.decks.length === 1 ? '' : 's'}`,
+        `Imported ${exportFile.decks.length} deck${exportFile.decks.length === 1 ? '' : 's'}`,
         'success'
       );
       navigate('/');
@@ -37,7 +37,7 @@ export default function Import() {
       <div>
         <h2 className="text-xl font-bold tracking-tight">Import</h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Select an Apprendo backup file (.json) to restore its decks, cards,
+          Select an Apprendo export file (.json) to restore its decks, cards,
           review history, and study tags. Existing data with the same IDs will
           be overwritten.
         </p>
@@ -61,7 +61,7 @@ export default function Import() {
           onClick={() => inputRef.current?.click()}
         >
           <Upload className="mr-1.5 h-4 w-4" aria-hidden="true" />
-          {importing ? 'Importing…' : 'Choose backup file'}
+          {importing ? 'Importing…' : 'Choose export file'}
         </button>
         {fileName && (
           <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-500">
