@@ -5,11 +5,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 import flowbiteReact from 'flowbite-react/plugin/vite'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
+      // No service worker inside the Capacitor WebView (mode 'android').
+      disable: mode === 'android',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'favicon.ico'],
       manifest: {
@@ -47,5 +49,5 @@ export default defineConfig({
       }
     }),
     flowbiteReact()
-  ],
-})
+  ]
+}))

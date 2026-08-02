@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Apprendo</string>
+    <string name="title_activity_main">Apprendo</string>
+    <string name="package_name">study.apprendo.app</string>
+    <string name="custom_url_scheme">study.apprendo.app</string>
+</resources>

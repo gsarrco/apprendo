@@ -1,8 +1,8 @@
 import { addRxPlugin } from 'rxdb';
-import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
-import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 import { createAppDatabase, type AppDatabase } from './database';
+import { PLATFORM } from '../platform/env';
+import { createAndroidStorage, createE2EStorage, createWebStorage } from './storage';
 import type { CardDoc, Deck, ReviewLogDoc, StudyTag } from '../types';
 
 export * from './database';
@@ -25,10 +25,9 @@ function readE2ESeeds(): E2ESeeds | null {
 async function initDb(): Promise<AppDatabase> {
   const seeds = readE2ESeeds();
   if (seeds) {
-    const { getRxStorageMemory } = await import('rxdb/plugins/storage-memory');
     const db = await createAppDatabase({
       name: 'test-db',
-      storage: getRxStorageMemory()
+      storage: await createE2EStorage()
     });
     await db.decks.bulkInsert(seeds.decks);
     await db.cards.bulkInsert(seeds.cards);
@@ -39,7 +38,7 @@ async function initDb(): Promise<AppDatabase> {
   if (import.meta.env.DEV) addRxPlugin(RxDBDevModePlugin);
   return createAppDatabase({
     name: 'apprendodb',
-    storage: wrappedValidateAjvStorage({ storage: getRxStorageDexie() }),
+    storage: PLATFORM === 'android' ? createAndroidStorage() : createWebStorage(),
     ignoreDuplicate: import.meta.env.DEV
   });
 }

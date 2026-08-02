@@ -28,6 +28,17 @@ blob-report
 *.sln
 *.sw?
 
+# Capacitor / Android
+android/app/build/
+android/.gradle/
+android/local.properties
+dist-android/
+*.apk
+*.aab
+*.keystore
+*.jks
+keystore.properties
+
 # Docs (keep only README and AGENTS)
 *.md
 !README.md

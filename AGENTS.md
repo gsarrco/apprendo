@@ -34,6 +34,40 @@ changed since the last build. Runs across three device projects:
 Desktop Chrome, Mobile Android (Pixel 9), and Mobile Safari (iPhone
 16).
 
+## Android build (Capacitor)
+
+The same web codebase ships as a signed Android APK via **Capacitor**
+(the generated native project lives in `android/`). The web deployment is
+untouched: `npm run build` still emits the PWA with its service worker.
+
+- **Platform switch**: `src/platform/env.ts` is the single source of
+  truth mapping each platform (`web` | `android`) to its RxDB storage
+  (see `PLATFORM_DATABASE`). `PLATFORM` is stamped at build time from
+  `VITE_PLATFORM`; `.env.android` sets it to `android` under
+  `vite build --mode android`. Android currently uses the same Dexie
+  (IndexedDB) storage as web, inside the Capacitor WebView; swapping to
+  another storage library later touches only `createAndroidStorage()` in
+  `src/db/storage.ts`.
+- In `--mode android` the service worker is disabled (VitePWA `disable`)
+  so no SW runs inside the WebView.
+
+Prerequisites: Android Studio / Android SDK and a JDK.
+
+```bash
+# one-time: create the release keystore (isolated in ~/.apprendo/signing,
+# never committed). Back that folder up encrypted.
+scripts/setup-android-signing.sh
+
+# build + sign the APK -> dist-android/apprendo-release.apk
+npm run apk
+```
+
+`npm run build:android` (web build with `VITE_PLATFORM=android` + PWA
+disabled, then `cap sync android`) is run for you by `npm run apk`.
+Signing config is loaded by `android/app/build.gradle` from
+`~/.apprendo/signing/keystore.properties` only if it exists — nothing
+secret ever enters the repo.
+
 ## Styling conventions
 
 - Use Tailwind utility classes directly in JSX. Do not add custom CSS.
@@ -74,5 +108,7 @@ Desktop Chrome, Mobile Android (Pixel 9), and Mobile Safari (iPhone
 - `src/components/` — UI components (one feature per file).
 - `src/hooks/` — React hooks; data hooks subscribe to RxDB via RxJS.
 - `src/db/` — RxDB database setup; `getDb()` is the async entry point.
+  Per-platform storage factories live in `src/db/storage.ts`.
+- `src/platform/` — build-time platform/env mapping (`env.ts`).
 - `src/fsrs/` — scheduler + mappers for `ts-fsrs`.
 - `src/types.ts` — shared document types (`Deck`, `CardDoc`).

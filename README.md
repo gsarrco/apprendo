@@ -44,6 +44,7 @@ Project layout:
 src/components/    UI components (one feature per file)
 src/hooks/         React hooks; data hooks subscribe to RxDB via RxJS
 src/db/            RxDB database setup (getDb() is the async entry point)
+src/platform/      Build-time platform/env mapping (web vs. android)
 src/fsrs/          Scheduler + mappers for ts-fsrs
 src/integrations/  Wikimedia Commons API client and language data
 src/lib/           Small shared utilities (e.g. Commons thumbnail URLs)
@@ -73,3 +74,22 @@ Create a production build:
 ```bash
 npm run build
 ```
+
+### Android (Capacitor)
+
+The same codebase ships as a signed Android APK via
+[Capacitor](https://capacitorjs.com) (native project in `android/`), while
+the web/PWA build stays unchanged. You need Android Studio / the Android SDK
+and a JDK.
+
+```bash
+# one-time: create an isolated release keystore in ~/.apprendo/signing
+# (never committed — back it up encrypted)
+scripts/setup-android-signing.sh
+
+# build + sign -> dist-android/apprendo-release.apk
+npm run apk
+```
+
+The per-platform database mapping is documented in `src/platform/env.ts`.
+Android currently reuses the Dexie/IndexedDB storage inside the WebView.
