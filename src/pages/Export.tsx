@@ -37,7 +37,7 @@ export default function Export() {
     setExporting(true);
     try {
       const exportFile = await buildExport([...selectedIds], { includeReviewLogs });
-      downloadExport(exportFile);
+      await downloadExport(exportFile);
       notify('Export ready', 'success');
     } catch (err) {
       notify(`Could not export: ${err instanceof Error ? err.message : String(err)}`);
