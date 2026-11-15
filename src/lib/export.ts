@@ -1,3 +1,6 @@
+import { Capacitor } from '@capacitor/core';
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { getDb } from '../db';
 import type { CardDoc, Deck, ReviewLogDoc, StudyTag } from '../types';
 
@@ -58,15 +61,33 @@ export async function buildExport(
   };
 }
 
-export function downloadExport(exportFile: ExportFile): void {
-  const blob = new Blob([JSON.stringify(exportFile)], {
+export async function downloadExport(exportFile: ExportFile): Promise<void> {
+  const json = JSON.stringify(exportFile);
+  const date = new Date(exportFile.exportedAt).toISOString().slice(0, 10);
+  const fileName = `apprendo-export-${date}.json`;
+
+  if (Capacitor.isNativePlatform()) {
+    const { uri } = await Filesystem.writeFile({
+      path: fileName,
+      data: json,
+      directory: Directory.Cache,
+      encoding: Encoding.UTF8
+    });
+    await Share.share({
+      title: fileName,
+      url: uri,
+      dialogTitle: 'Save or share your export'
+    });
+    return;
+  }
+
+  const blob = new Blob([json], {
     type: 'application/json'
   });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const date = new Date(exportFile.exportedAt).toISOString().slice(0, 10);
   a.href = url;
-  a.download = `apprendo-export-${date}.json`;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   a.remove();
