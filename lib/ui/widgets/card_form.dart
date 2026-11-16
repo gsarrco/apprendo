@@ -260,7 +260,7 @@ class _CardSideEditorState extends State<_CardSideEditor> {
             ),
             ButtonSegment(
               value: _SideTab.pronunciation,
-              label: Text('Pronunciation'),
+              label: Text('Audio'),
               icon: Icon(Icons.graphic_eq, size: 16),
             ),
             ButtonSegment(
