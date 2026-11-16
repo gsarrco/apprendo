@@ -1,45 +1,47 @@
-# Logs
-logs
+# Miscellaneous
+*.class
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Playwright
-test-results
-playwright-report
-blob-report
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+*.pyc
+*.swp
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
 
-# Capacitor / Android
-android/app/build/
-android/.gradle/
-android/local.properties
-dist-android/
-*.apk
-*.aab
-*.keystore
-*.jks
-keystore.properties
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
 
-# Docs (keep only README and AGENTS)
-*.md
-!README.md
-!AGENTS.md
+# VS Code
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio build artifacts
+/android/*/debug/
+/android/*/profile/
+/android/*/release/
+
+# Claude Code local settings
+.claude/

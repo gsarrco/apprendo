@@ -1,0 +1,36 @@
+name: apprendo
+description: >-
+  Create flashcard decks and study them on a spaced-repetition schedule.
+publish_to: 'none'
+version: 2.0.0+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  drift: ^2.35.4
+  drift_flutter: ^0.3.1
+  sqlite3_flutter_libs: ^0.6.0+eol
+  path_provider: ^2.1.5
+  # Pinned: 2.3.x pulls in the `jni` package, whose native CMake build
+  # cannot run on ARM64 Linux hosts (SDK cmake is x86-64 only).
+  path_provider_android: 2.2.23
+  path: ^1.9.1
+  http: ^1.5.0
+  just_audio: ^0.10.5
+  file_picker: ^13.3.3
+  share_plus: ^13.3.1
+  intl: ^0.20.2
+  material_ui: ^1.11.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.35.3
+  build_runner: ^2.7.1
+
+flutter:
+  uses-material-design: true
