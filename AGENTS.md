@@ -94,6 +94,21 @@ the emulator fails to boot, read `~/Android/cf/work/run_cvd.out` and
 - If Gradle fails with an aapt2 exec error, check
   `~/.gradle/gradle.properties` still has `android.aapt2FromMavenOverride`
   pointing at the native build-tools aapt2.
+- Release/profile builds need `gen_snapshot` (AOT compiler), which
+  Flutter does not ship for linux-arm64 hosts. A wrapper script at
+  `~/flutter-sdk/bin/cache/artifacts/engine/android-arm64-release/linux-arm64/gen_snapshot`
+  runs the x86-64 binary via `qemu-x86_64 -L ~/x86-sysroot` (a minimal
+  x86-64 glibc sysroot). FEX cannot run it: gen_snapshot's bundled
+  jemalloc aborts on the host's 16 KB page size. A Flutter SDK upgrade
+  wipes the wrapper — recreate it after upgrading.
+- If a release APK suddenly balloons from ~21 MB to ~180 MB, the NDK's
+  `llvm-strip` symlink was reset by an NDK upgrade (the x86-64 binary
+  fails silently under FEX, so AGP packages `libflutter.so` unstripped —
+  the Flutter 3.50.0 release engine ships with ~158 MB of DWARF debug
+  info). Fix: relink
+  `~/Android/Sdk/ndk/<version>/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip`
+  to `/usr/bin/llvm-strip`, delete
+  `build/app/intermediates/stripped_native_libs`, and rebuild.
 
 ## Project layout
 
