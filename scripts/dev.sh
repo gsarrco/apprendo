@@ -7,7 +7,7 @@ REPO=$(cd "$(dirname "$0")/.." && pwd)
 ADB_BIN="${ANDROID_HOME:-$HOME/Android/Sdk}/platform-tools/adb"
 adb() { "$ADB_BIN" -s 0.0.0.0:6520 "$@"; }
 APK="$REPO/build/app/outputs/flutter-apk/app-debug.apk"
-APP_ID="study.apprendo.apprendo"
+APP_ID="study.apprendo.android"
 INSTANCE_DIR="$CF_HOME/cuttlefish/instances/cvd-1"
 BOOT_TIMEOUT="${BOOT_TIMEOUT:-300}"
 BUILD_LOG="$REPO/build/dev-build.log"

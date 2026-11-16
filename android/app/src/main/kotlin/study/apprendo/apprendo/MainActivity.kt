@@ -1,4 +1,4 @@
-package study.apprendo.apprendo
+package study.apprendo.android
 
 import io.flutter.embedding.android.FlutterActivity
 
