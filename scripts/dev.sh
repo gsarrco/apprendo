@@ -27,6 +27,7 @@ Commands:
   down      stop the emulator gracefully (app data is kept)
   restart   down + up
   status    show emulator and app state
+  screen    mirror the emulator display (scrcpy, falls back to VNC viewer)
   vnc       open a VNC viewer on the emulator screen
   logs      follow Flutter logs from the app
 
@@ -180,15 +181,18 @@ install_app() {
 }
 
 open_screen() {
-  if pgrep -f "vncviewer.*6444" > /dev/null 2>&1; then
-    echo "Screen: vncviewer already open (localhost:6444)"
+  if pgrep -f "scrcpy.*0.0.0.0:6520" > /dev/null 2>&1; then
+    echo "Screen: scrcpy already open"
     return
   fi
-  if command -v vncviewer > /dev/null && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+  if command -v scrcpy > /dev/null && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+    setsid nohup scrcpy -s 0.0.0.0:6520 > /dev/null 2>&1 < /dev/null &
+    echo "Screen: opened scrcpy"
+  elif command -v vncviewer > /dev/null && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
     setsid nohup vncviewer -AlertOnFatalError=0 localhost:6444 > /dev/null 2>&1 < /dev/null &
     echo "Screen: opened vncviewer (localhost:6444)"
   else
-    echo "Screen: run 'vncviewer localhost:6444' to see the device"
+    echo "Screen: install scrcpy (preferred) or run 'vncviewer localhost:6444'"
   fi
 }
 
@@ -240,9 +244,20 @@ cmd_status() {
     else
       echo "adb: offline (still booting?)"
     fi
-    echo "screen: vncviewer localhost:6444"
+    echo "screen: scrcpy -s 0.0.0.0:6520 (fallback: vncviewer localhost:6444)"
   else
     echo "emulator: stopped"
+  fi
+}
+
+cmd_screen() {
+  adb_online || die "emulator not online"
+  if command -v scrcpy > /dev/null; then
+    exec scrcpy -s 0.0.0.0:6520
+  elif command -v vncviewer > /dev/null; then
+    exec vncviewer localhost:6444
+  else
+    die "install scrcpy (preferred) or tigervnc"
   fi
 }
 
@@ -256,6 +271,7 @@ case "${1:-up}" in
   down) cmd_down ;;
   restart) cmd_restart ;;
   status) cmd_status ;;
+  screen) cmd_screen ;;
   vnc) cmd_vnc ;;
   logs) cmd_logs ;;
   -h|--help|help) usage ;;
