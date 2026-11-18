@@ -26,21 +26,6 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _keepAttachmentsOfflineMeta =
-      const VerificationMeta('keepAttachmentsOffline');
-  @override
-  late final GeneratedColumn<bool> keepAttachmentsOffline =
-      GeneratedColumn<bool>(
-        'keep_attachments_offline',
-        aliasedName,
-        false,
-        type: DriftSqlType.bool,
-        requiredDuringInsert: false,
-        defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'CHECK ("keep_attachments_offline" IN (0, 1))',
-        ),
-        defaultValue: const Constant(false),
-      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -53,12 +38,7 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    name,
-    keepAttachmentsOffline,
-    createdAt,
-  ];
+  List<GeneratedColumn> get $columns => [id, name, createdAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -83,15 +63,6 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
-    }
-    if (data.containsKey('keep_attachments_offline')) {
-      context.handle(
-        _keepAttachmentsOfflineMeta,
-        keepAttachmentsOffline.isAcceptableOrUnknown(
-          data['keep_attachments_offline']!,
-          _keepAttachmentsOfflineMeta,
-        ),
-      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -118,10 +89,6 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
-      keepAttachmentsOffline: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}keep_attachments_offline'],
-      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -138,12 +105,10 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
 class DeckRow extends DataClass implements Insertable<DeckRow> {
   final String id;
   final String name;
-  final bool keepAttachmentsOffline;
   final int createdAt;
   const DeckRow({
     required this.id,
     required this.name,
-    required this.keepAttachmentsOffline,
     required this.createdAt,
   });
   @override
@@ -151,7 +116,6 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
-    map['keep_attachments_offline'] = Variable<bool>(keepAttachmentsOffline);
     map['created_at'] = Variable<int>(createdAt);
     return map;
   }
@@ -160,7 +124,6 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     return DecksCompanion(
       id: Value(id),
       name: Value(name),
-      keepAttachmentsOffline: Value(keepAttachmentsOffline),
       createdAt: Value(createdAt),
     );
   }
@@ -173,9 +136,6 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     return DeckRow(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      keepAttachmentsOffline: serializer.fromJson<bool>(
-        json['keepAttachmentsOffline'],
-      ),
       createdAt: serializer.fromJson<int>(json['createdAt']),
     );
   }
@@ -185,30 +145,19 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
-      'keepAttachmentsOffline': serializer.toJson<bool>(keepAttachmentsOffline),
       'createdAt': serializer.toJson<int>(createdAt),
     };
   }
 
-  DeckRow copyWith({
-    String? id,
-    String? name,
-    bool? keepAttachmentsOffline,
-    int? createdAt,
-  }) => DeckRow(
+  DeckRow copyWith({String? id, String? name, int? createdAt}) => DeckRow(
     id: id ?? this.id,
     name: name ?? this.name,
-    keepAttachmentsOffline:
-        keepAttachmentsOffline ?? this.keepAttachmentsOffline,
     createdAt: createdAt ?? this.createdAt,
   );
   DeckRow copyWithCompanion(DecksCompanion data) {
     return DeckRow(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
-      keepAttachmentsOffline: data.keepAttachmentsOffline.present
-          ? data.keepAttachmentsOffline.value
-          : this.keepAttachmentsOffline,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -218,41 +167,36 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     return (StringBuffer('DeckRow(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('keepAttachmentsOffline: $keepAttachmentsOffline, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, keepAttachmentsOffline, createdAt);
+  int get hashCode => Object.hash(id, name, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is DeckRow &&
           other.id == this.id &&
           other.name == this.name &&
-          other.keepAttachmentsOffline == this.keepAttachmentsOffline &&
           other.createdAt == this.createdAt);
 }
 
 class DecksCompanion extends UpdateCompanion<DeckRow> {
   final Value<String> id;
   final Value<String> name;
-  final Value<bool> keepAttachmentsOffline;
   final Value<int> createdAt;
   final Value<int> rowid;
   const DecksCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
-    this.keepAttachmentsOffline = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DecksCompanion.insert({
     required String id,
     required String name,
-    this.keepAttachmentsOffline = const Value.absent(),
     required int createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -261,15 +205,12 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
   static Insertable<DeckRow> custom({
     Expression<String>? id,
     Expression<String>? name,
-    Expression<bool>? keepAttachmentsOffline,
     Expression<int>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
-      if (keepAttachmentsOffline != null)
-        'keep_attachments_offline': keepAttachmentsOffline,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -278,15 +219,12 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
   DecksCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
-    Value<bool>? keepAttachmentsOffline,
     Value<int>? createdAt,
     Value<int>? rowid,
   }) {
     return DecksCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
-      keepAttachmentsOffline:
-          keepAttachmentsOffline ?? this.keepAttachmentsOffline,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -300,11 +238,6 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
-    }
-    if (keepAttachmentsOffline.present) {
-      map['keep_attachments_offline'] = Variable<bool>(
-        keepAttachmentsOffline.value,
-      );
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -320,7 +253,6 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     return (StringBuffer('DecksCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('keepAttachmentsOffline: $keepAttachmentsOffline, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1280,15 +1212,6 @@ class $CardAttachmentsTable extends CardAttachments
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _urlMeta = const VerificationMeta('url');
-  @override
-  late final GeneratedColumn<String> url = GeneratedColumn<String>(
-    'url',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _captionMeta = const VerificationMeta(
     'caption',
   );
@@ -1323,16 +1246,27 @@ class $CardAttachmentsTable extends CardAttachments
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _blobContentMeta = const VerificationMeta(
-    'blobContent',
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
   );
   @override
-  late final GeneratedColumn<String> blobContent = GeneratedColumn<String>(
-    'blob_content',
+  late final GeneratedColumn<Uint8List> content = GeneratedColumn<Uint8List>(
+    'content',
     aliasedName,
-    true,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mimeTypeMeta = const VerificationMeta(
+    'mimeType',
+  );
+  @override
+  late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
+    'mime_type',
+    aliasedName,
+    false,
     type: DriftSqlType.string,
-    requiredDuringInsert: false,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -1352,11 +1286,11 @@ class $CardAttachmentsTable extends CardAttachments
     side,
     position,
     type,
-    url,
     caption,
     attribution,
     languageQid,
-    blobContent,
+    content,
+    mimeType,
     createdAt,
   ];
   @override
@@ -1406,12 +1340,6 @@ class $CardAttachmentsTable extends CardAttachments
     } else if (isInserting) {
       context.missing(_typeMeta);
     }
-    if (data.containsKey('url')) {
-      context.handle(
-        _urlMeta,
-        url.isAcceptableOrUnknown(data['url']!, _urlMeta),
-      );
-    }
     if (data.containsKey('caption')) {
       context.handle(
         _captionMeta,
@@ -1436,14 +1364,21 @@ class $CardAttachmentsTable extends CardAttachments
         ),
       );
     }
-    if (data.containsKey('blob_content')) {
+    if (data.containsKey('content')) {
       context.handle(
-        _blobContentMeta,
-        blobContent.isAcceptableOrUnknown(
-          data['blob_content']!,
-          _blobContentMeta,
-        ),
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
       );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('mime_type')) {
+      context.handle(
+        _mimeTypeMeta,
+        mimeType.isAcceptableOrUnknown(data['mime_type']!, _mimeTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mimeTypeMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -1482,10 +1417,6 @@ class $CardAttachmentsTable extends CardAttachments
         DriftSqlType.string,
         data['${effectivePrefix}type'],
       )!,
-      url: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}url'],
-      ),
       caption: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}caption'],
@@ -1498,10 +1429,14 @@ class $CardAttachmentsTable extends CardAttachments
         DriftSqlType.string,
         data['${effectivePrefix}language_qid'],
       ),
-      blobContent: attachedDatabase.typeMapping.read(
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}content'],
+      )!,
+      mimeType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}blob_content'],
-      ),
+        data['${effectivePrefix}mime_type'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -1526,13 +1461,15 @@ class CardAttachmentRow extends DataClass
 
   /// Either 'image' or 'audio'.
   final String type;
-  final String? url;
   final String caption;
   final String? attribution;
   final String? languageQid;
 
-  /// Base64 data URL cached for offline use.
-  final String? blobContent;
+  /// The raw file bytes. Attachments are always stored in the database.
+  final Uint8List content;
+
+  /// Mime type of [content], e.g. 'image/jpeg' or 'audio/ogg'.
+  final String mimeType;
   final int createdAt;
   const CardAttachmentRow({
     required this.id,
@@ -1540,11 +1477,11 @@ class CardAttachmentRow extends DataClass
     required this.side,
     required this.position,
     required this.type,
-    this.url,
     required this.caption,
     this.attribution,
     this.languageQid,
-    this.blobContent,
+    required this.content,
+    required this.mimeType,
     required this.createdAt,
   });
   @override
@@ -1555,9 +1492,6 @@ class CardAttachmentRow extends DataClass
     map['side'] = Variable<String>(side);
     map['position'] = Variable<int>(position);
     map['type'] = Variable<String>(type);
-    if (!nullToAbsent || url != null) {
-      map['url'] = Variable<String>(url);
-    }
     map['caption'] = Variable<String>(caption);
     if (!nullToAbsent || attribution != null) {
       map['attribution'] = Variable<String>(attribution);
@@ -1565,9 +1499,8 @@ class CardAttachmentRow extends DataClass
     if (!nullToAbsent || languageQid != null) {
       map['language_qid'] = Variable<String>(languageQid);
     }
-    if (!nullToAbsent || blobContent != null) {
-      map['blob_content'] = Variable<String>(blobContent);
-    }
+    map['content'] = Variable<Uint8List>(content);
+    map['mime_type'] = Variable<String>(mimeType);
     map['created_at'] = Variable<int>(createdAt);
     return map;
   }
@@ -1579,7 +1512,6 @@ class CardAttachmentRow extends DataClass
       side: Value(side),
       position: Value(position),
       type: Value(type),
-      url: url == null && nullToAbsent ? const Value.absent() : Value(url),
       caption: Value(caption),
       attribution: attribution == null && nullToAbsent
           ? const Value.absent()
@@ -1587,9 +1519,8 @@ class CardAttachmentRow extends DataClass
       languageQid: languageQid == null && nullToAbsent
           ? const Value.absent()
           : Value(languageQid),
-      blobContent: blobContent == null && nullToAbsent
-          ? const Value.absent()
-          : Value(blobContent),
+      content: Value(content),
+      mimeType: Value(mimeType),
       createdAt: Value(createdAt),
     );
   }
@@ -1605,11 +1536,11 @@ class CardAttachmentRow extends DataClass
       side: serializer.fromJson<String>(json['side']),
       position: serializer.fromJson<int>(json['position']),
       type: serializer.fromJson<String>(json['type']),
-      url: serializer.fromJson<String?>(json['url']),
       caption: serializer.fromJson<String>(json['caption']),
       attribution: serializer.fromJson<String?>(json['attribution']),
       languageQid: serializer.fromJson<String?>(json['languageQid']),
-      blobContent: serializer.fromJson<String?>(json['blobContent']),
+      content: serializer.fromJson<Uint8List>(json['content']),
+      mimeType: serializer.fromJson<String>(json['mimeType']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
     );
   }
@@ -1622,11 +1553,11 @@ class CardAttachmentRow extends DataClass
       'side': serializer.toJson<String>(side),
       'position': serializer.toJson<int>(position),
       'type': serializer.toJson<String>(type),
-      'url': serializer.toJson<String?>(url),
       'caption': serializer.toJson<String>(caption),
       'attribution': serializer.toJson<String?>(attribution),
       'languageQid': serializer.toJson<String?>(languageQid),
-      'blobContent': serializer.toJson<String?>(blobContent),
+      'content': serializer.toJson<Uint8List>(content),
+      'mimeType': serializer.toJson<String>(mimeType),
       'createdAt': serializer.toJson<int>(createdAt),
     };
   }
@@ -1637,11 +1568,11 @@ class CardAttachmentRow extends DataClass
     String? side,
     int? position,
     String? type,
-    Value<String?> url = const Value.absent(),
     String? caption,
     Value<String?> attribution = const Value.absent(),
     Value<String?> languageQid = const Value.absent(),
-    Value<String?> blobContent = const Value.absent(),
+    Uint8List? content,
+    String? mimeType,
     int? createdAt,
   }) => CardAttachmentRow(
     id: id ?? this.id,
@@ -1649,11 +1580,11 @@ class CardAttachmentRow extends DataClass
     side: side ?? this.side,
     position: position ?? this.position,
     type: type ?? this.type,
-    url: url.present ? url.value : this.url,
     caption: caption ?? this.caption,
     attribution: attribution.present ? attribution.value : this.attribution,
     languageQid: languageQid.present ? languageQid.value : this.languageQid,
-    blobContent: blobContent.present ? blobContent.value : this.blobContent,
+    content: content ?? this.content,
+    mimeType: mimeType ?? this.mimeType,
     createdAt: createdAt ?? this.createdAt,
   );
   CardAttachmentRow copyWithCompanion(CardAttachmentsCompanion data) {
@@ -1663,7 +1594,6 @@ class CardAttachmentRow extends DataClass
       side: data.side.present ? data.side.value : this.side,
       position: data.position.present ? data.position.value : this.position,
       type: data.type.present ? data.type.value : this.type,
-      url: data.url.present ? data.url.value : this.url,
       caption: data.caption.present ? data.caption.value : this.caption,
       attribution: data.attribution.present
           ? data.attribution.value
@@ -1671,9 +1601,8 @@ class CardAttachmentRow extends DataClass
       languageQid: data.languageQid.present
           ? data.languageQid.value
           : this.languageQid,
-      blobContent: data.blobContent.present
-          ? data.blobContent.value
-          : this.blobContent,
+      content: data.content.present ? data.content.value : this.content,
+      mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1686,11 +1615,11 @@ class CardAttachmentRow extends DataClass
           ..write('side: $side, ')
           ..write('position: $position, ')
           ..write('type: $type, ')
-          ..write('url: $url, ')
           ..write('caption: $caption, ')
           ..write('attribution: $attribution, ')
           ..write('languageQid: $languageQid, ')
-          ..write('blobContent: $blobContent, ')
+          ..write('content: $content, ')
+          ..write('mimeType: $mimeType, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1703,11 +1632,11 @@ class CardAttachmentRow extends DataClass
     side,
     position,
     type,
-    url,
     caption,
     attribution,
     languageQid,
-    blobContent,
+    $driftBlobEquality.hash(content),
+    mimeType,
     createdAt,
   );
   @override
@@ -1719,11 +1648,11 @@ class CardAttachmentRow extends DataClass
           other.side == this.side &&
           other.position == this.position &&
           other.type == this.type &&
-          other.url == this.url &&
           other.caption == this.caption &&
           other.attribution == this.attribution &&
           other.languageQid == this.languageQid &&
-          other.blobContent == this.blobContent &&
+          $driftBlobEquality.equals(other.content, this.content) &&
+          other.mimeType == this.mimeType &&
           other.createdAt == this.createdAt);
 }
 
@@ -1733,11 +1662,11 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
   final Value<String> side;
   final Value<int> position;
   final Value<String> type;
-  final Value<String?> url;
   final Value<String> caption;
   final Value<String?> attribution;
   final Value<String?> languageQid;
-  final Value<String?> blobContent;
+  final Value<Uint8List> content;
+  final Value<String> mimeType;
   final Value<int> createdAt;
   const CardAttachmentsCompanion({
     this.id = const Value.absent(),
@@ -1745,11 +1674,11 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
     this.side = const Value.absent(),
     this.position = const Value.absent(),
     this.type = const Value.absent(),
-    this.url = const Value.absent(),
     this.caption = const Value.absent(),
     this.attribution = const Value.absent(),
     this.languageQid = const Value.absent(),
-    this.blobContent = const Value.absent(),
+    this.content = const Value.absent(),
+    this.mimeType = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   CardAttachmentsCompanion.insert({
@@ -1758,16 +1687,18 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
     required String side,
     required int position,
     required String type,
-    this.url = const Value.absent(),
     this.caption = const Value.absent(),
     this.attribution = const Value.absent(),
     this.languageQid = const Value.absent(),
-    this.blobContent = const Value.absent(),
+    required Uint8List content,
+    required String mimeType,
     required int createdAt,
   }) : cardId = Value(cardId),
        side = Value(side),
        position = Value(position),
        type = Value(type),
+       content = Value(content),
+       mimeType = Value(mimeType),
        createdAt = Value(createdAt);
   static Insertable<CardAttachmentRow> custom({
     Expression<int>? id,
@@ -1775,11 +1706,11 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
     Expression<String>? side,
     Expression<int>? position,
     Expression<String>? type,
-    Expression<String>? url,
     Expression<String>? caption,
     Expression<String>? attribution,
     Expression<String>? languageQid,
-    Expression<String>? blobContent,
+    Expression<Uint8List>? content,
+    Expression<String>? mimeType,
     Expression<int>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -1788,11 +1719,11 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
       if (side != null) 'side': side,
       if (position != null) 'position': position,
       if (type != null) 'type': type,
-      if (url != null) 'url': url,
       if (caption != null) 'caption': caption,
       if (attribution != null) 'attribution': attribution,
       if (languageQid != null) 'language_qid': languageQid,
-      if (blobContent != null) 'blob_content': blobContent,
+      if (content != null) 'content': content,
+      if (mimeType != null) 'mime_type': mimeType,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -1803,11 +1734,11 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
     Value<String>? side,
     Value<int>? position,
     Value<String>? type,
-    Value<String?>? url,
     Value<String>? caption,
     Value<String?>? attribution,
     Value<String?>? languageQid,
-    Value<String?>? blobContent,
+    Value<Uint8List>? content,
+    Value<String>? mimeType,
     Value<int>? createdAt,
   }) {
     return CardAttachmentsCompanion(
@@ -1816,11 +1747,11 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
       side: side ?? this.side,
       position: position ?? this.position,
       type: type ?? this.type,
-      url: url ?? this.url,
       caption: caption ?? this.caption,
       attribution: attribution ?? this.attribution,
       languageQid: languageQid ?? this.languageQid,
-      blobContent: blobContent ?? this.blobContent,
+      content: content ?? this.content,
+      mimeType: mimeType ?? this.mimeType,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -1843,9 +1774,6 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
     if (type.present) {
       map['type'] = Variable<String>(type.value);
     }
-    if (url.present) {
-      map['url'] = Variable<String>(url.value);
-    }
     if (caption.present) {
       map['caption'] = Variable<String>(caption.value);
     }
@@ -1855,8 +1783,11 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
     if (languageQid.present) {
       map['language_qid'] = Variable<String>(languageQid.value);
     }
-    if (blobContent.present) {
-      map['blob_content'] = Variable<String>(blobContent.value);
+    if (content.present) {
+      map['content'] = Variable<Uint8List>(content.value);
+    }
+    if (mimeType.present) {
+      map['mime_type'] = Variable<String>(mimeType.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -1872,11 +1803,11 @@ class CardAttachmentsCompanion extends UpdateCompanion<CardAttachmentRow> {
           ..write('side: $side, ')
           ..write('position: $position, ')
           ..write('type: $type, ')
-          ..write('url: $url, ')
           ..write('caption: $caption, ')
           ..write('attribution: $attribution, ')
           ..write('languageQid: $languageQid, ')
-          ..write('blobContent: $blobContent, ')
+          ..write('content: $content, ')
+          ..write('mimeType: $mimeType, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3142,14 +3073,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$DecksTableCreateCompanionBuilder = DecksCompanion Function({
   required String id,
   required String name,
-  Value<bool> keepAttachmentsOffline,
   required int createdAt,
   Value<int> rowid,
 });
 typedef $$DecksTableUpdateCompanionBuilder = DecksCompanion Function({
   Value<String> id,
   Value<String> name,
-  Value<bool> keepAttachmentsOffline,
   Value<int> createdAt,
   Value<int> rowid,
 });
@@ -3211,11 +3140,6 @@ class $$DecksTableFilterComposer extends Composer<_$AppDatabase, $DecksTable> {
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get keepAttachmentsOffline => $composableBuilder(
-    column: $table.keepAttachmentsOffline,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3294,11 +3218,6 @@ class $$DecksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get keepAttachmentsOffline => $composableBuilder(
-    column: $table.keepAttachmentsOffline,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3319,11 +3238,6 @@ class $$DecksTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<bool> get keepAttachmentsOffline => $composableBuilder(
-    column: $table.keepAttachmentsOffline,
-    builder: (column) => column,
-  );
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3409,13 +3323,11 @@ class $$DecksTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-                Value<bool> keepAttachmentsOffline = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DecksCompanion(
                 id: id,
                 name: name,
-                keepAttachmentsOffline: keepAttachmentsOffline,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -3423,13 +3335,11 @@ class $$DecksTableTableManager
               ({
                 required String id,
                 required String name,
-                Value<bool> keepAttachmentsOffline = const Value.absent(),
                 required int createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => DecksCompanion.insert(
                 id: id,
                 name: name,
-                keepAttachmentsOffline: keepAttachmentsOffline,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -4142,11 +4052,11 @@ typedef $$CardAttachmentsTableCreateCompanionBuilder =
       required String side,
       required int position,
       required String type,
-      Value<String?> url,
       Value<String> caption,
       Value<String?> attribution,
       Value<String?> languageQid,
-      Value<String?> blobContent,
+      required Uint8List content,
+      required String mimeType,
       required int createdAt,
     });
 typedef $$CardAttachmentsTableUpdateCompanionBuilder =
@@ -4156,11 +4066,11 @@ typedef $$CardAttachmentsTableUpdateCompanionBuilder =
       Value<String> side,
       Value<int> position,
       Value<String> type,
-      Value<String?> url,
       Value<String> caption,
       Value<String?> attribution,
       Value<String?> languageQid,
-      Value<String?> blobContent,
+      Value<Uint8List> content,
+      Value<String> mimeType,
       Value<int> createdAt,
     });
 
@@ -4224,11 +4134,6 @@ class $$CardAttachmentsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get url => $composableBuilder(
-    column: $table.url,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get caption => $composableBuilder(
     column: $table.caption,
     builder: (column) => ColumnFilters(column),
@@ -4244,8 +4149,13 @@ class $$CardAttachmentsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get blobContent => $composableBuilder(
-    column: $table.blobContent,
+  ColumnFilters<Uint8List> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4307,11 +4217,6 @@ class $$CardAttachmentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get url => $composableBuilder(
-    column: $table.url,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get caption => $composableBuilder(
     column: $table.caption,
     builder: (column) => ColumnOrderings(column),
@@ -4327,8 +4232,13 @@ class $$CardAttachmentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get blobContent => $composableBuilder(
-    column: $table.blobContent,
+  ColumnOrderings<Uint8List> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -4382,9 +4292,6 @@ class $$CardAttachmentsTableAnnotationComposer
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
 
-  GeneratedColumn<String> get url =>
-      $composableBuilder(column: $table.url, builder: (column) => column);
-
   GeneratedColumn<String> get caption =>
       $composableBuilder(column: $table.caption, builder: (column) => column);
 
@@ -4398,10 +4305,11 @@ class $$CardAttachmentsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get blobContent => $composableBuilder(
-    column: $table.blobContent,
-    builder: (column) => column,
-  );
+  GeneratedColumn<Uint8List> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get mimeType =>
+      $composableBuilder(column: $table.mimeType, builder: (column) => column);
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -4465,11 +4373,11 @@ class $$CardAttachmentsTableTableManager
                 Value<String> side = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 Value<String> type = const Value.absent(),
-                Value<String?> url = const Value.absent(),
                 Value<String> caption = const Value.absent(),
                 Value<String?> attribution = const Value.absent(),
                 Value<String?> languageQid = const Value.absent(),
-                Value<String?> blobContent = const Value.absent(),
+                Value<Uint8List> content = const Value.absent(),
+                Value<String> mimeType = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
               }) => CardAttachmentsCompanion(
                 id: id,
@@ -4477,11 +4385,11 @@ class $$CardAttachmentsTableTableManager
                 side: side,
                 position: position,
                 type: type,
-                url: url,
                 caption: caption,
                 attribution: attribution,
                 languageQid: languageQid,
-                blobContent: blobContent,
+                content: content,
+                mimeType: mimeType,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -4491,11 +4399,11 @@ class $$CardAttachmentsTableTableManager
                 required String side,
                 required int position,
                 required String type,
-                Value<String?> url = const Value.absent(),
                 Value<String> caption = const Value.absent(),
                 Value<String?> attribution = const Value.absent(),
                 Value<String?> languageQid = const Value.absent(),
-                Value<String?> blobContent = const Value.absent(),
+                required Uint8List content,
+                required String mimeType,
                 required int createdAt,
               }) => CardAttachmentsCompanion.insert(
                 id: id,
@@ -4503,11 +4411,11 @@ class $$CardAttachmentsTableTableManager
                 side: side,
                 position: position,
                 type: type,
-                url: url,
                 caption: caption,
                 attribution: attribution,
                 languageQid: languageQid,
-                blobContent: blobContent,
+                content: content,
+                mimeType: mimeType,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

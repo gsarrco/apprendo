@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../data/database.dart';
 import '../domain/models.dart';
 import '../fsrs/fsrs.dart';
@@ -13,9 +15,9 @@ Future<void> seedDemoData(AppDatabase db) async {
   final now = DateTime.now();
 
   final decks = [
-    Deck(id: 'demo-it', name: 'Italian Vocabulary', keepAttachmentsOffline: false, createdAt: now.subtract(const Duration(days: 30)).millisecondsSinceEpoch),
-    Deck(id: 'demo-nl', name: 'Dutch Nouns', keepAttachmentsOffline: false, createdAt: now.subtract(const Duration(days: 21)).millisecondsSinceEpoch),
-    Deck(id: 'demo-es', name: 'Spanish Verbs', keepAttachmentsOffline: false, createdAt: now.subtract(const Duration(days: 10)).millisecondsSinceEpoch),
+    Deck(id: 'demo-it', name: 'Italian Vocabulary', createdAt: now.subtract(const Duration(days: 30)).millisecondsSinceEpoch),
+    Deck(id: 'demo-nl', name: 'Dutch Nouns', createdAt: now.subtract(const Duration(days: 21)).millisecondsSinceEpoch),
+    Deck(id: 'demo-es', name: 'Spanish Verbs', createdAt: now.subtract(const Duration(days: 10)).millisecondsSinceEpoch),
   ];
   for (final d in decks) {
     await db.insertDeck(d);
@@ -91,10 +93,12 @@ Future<void> seedDemoData(AppDatabase db) async {
     return card;
   }
 
-  const commonImages = <CardAttachment>[
+  final commonImages = <CardAttachment>[
     CardAttachment(
       type: AttachmentType.image,
-      url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Yellow_tomato.jpg/320px-Yellow_tomato.jpg',
+      mimeType: 'image/png',
+      content: base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),
       caption: 'yellow tomato',
       attribution: 'Wikipedia: File:Yellow tomato.jpg',
       createdAt: 0,

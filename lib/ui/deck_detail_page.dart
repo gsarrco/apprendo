@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 import '../app.dart';
 import '../domain/models.dart';
 import '../services/audio_service.dart' as audio;
-import '../services/offline_attachments.dart';
 import 'study_session_page.dart';
 import 'widgets/attachment_views.dart';
 import 'widgets/card_form.dart';
@@ -20,50 +19,6 @@ class DeckDetailPage extends StatefulWidget {
 
 class _DeckDetailPageState extends State<DeckDetailPage> {
   String? _editingCardId;
-  bool _downloading = false;
-  int _downloadDone = 0;
-  int _downloadTotal = 0;
-  bool _cancelled = false;
-
-  @override
-  void dispose() {
-    _cancelled = true;
-    super.dispose();
-  }
-
-  Future<void> _toggleOffline(Deck deck) async {
-    final next = !deck.keepAttachmentsOffline;
-    await appDb.setKeepAttachmentsOffline(deck.id, next);
-    if (!next) {
-      _cancelled = true;
-      await appDb.removeDeckBlobContent(deck.id);
-    } else {
-      _cancelled = false;
-      final cards = await appDb.getCardsOfDecks([deck.id]);
-      final pending = pendingCount(cards);
-      if (pending > 0) {
-        setState(() {
-          _downloading = true;
-          _downloadDone = 0;
-          _downloadTotal = pending;
-        });
-        try {
-          await downloadDeckAttachments(appDb, deck.id, () {
-            if (mounted) setState(() => _downloadDone += 1);
-          }, () => _cancelled);
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text('Could not download attachments: $e')),
-            );
-          }
-        } finally {
-          if (mounted) setState(() => _downloading = false);
-        }
-      }
-    }
-  }
 
   Future<void> _renameDeck(Deck deck) async {
     final controller = TextEditingController(text: deck.name);
@@ -108,45 +63,6 @@ class _DeckDetailPageState extends State<DeckDetailPage> {
                 style: const TextStyle(fontSize: 18),
               ),
             ),
-            actions: [
-              if (deck != null)
-                Row(
-                  children: [
-                    Text(
-                      'Save attachments',
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
-                    Switch(
-                      value: deck.keepAttachmentsOffline,
-                      onChanged: (_) => _toggleOffline(deck),
-                    ),
-                    IconButton(
-                      tooltip:
-                          'Downloads all Commons attachments, current and '
-                          'future, so you can study without an internet '
-                          'connection.',
-                      icon: const Icon(Icons.info_outline, size: 20),
-                      onPressed: () => showDialog<void>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Save attachments'),
-                          content: const Text(
-                            'Downloads all Commons attachments, current and '
-                            'future, so you can study without an internet '
-                            'connection.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('OK'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
           ),
           body: StreamBuilder<List<CardDoc>>(
             stream: appDb.watchCards(widget.deckId),
@@ -159,14 +75,6 @@ class _DeckDetailPageState extends State<DeckDetailPage> {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  if (_downloading) ...[
-                    LinearProgressIndicator(
-                      value: _downloadTotal == 0
-                          ? null
-                          : _downloadDone / _downloadTotal,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
                   FilledButton.icon(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
@@ -285,7 +193,7 @@ class _CardTile extends StatelessWidget {
                           onPlay: (i) => audio.playAudio(card.frontAttachments
                               .where((a) => a.type == AttachmentType.audio)
                               .toList()[i]
-                              .src),
+                              .dataUrl),
                         ),
                       ],
                     ),
@@ -311,7 +219,7 @@ class _CardTile extends StatelessWidget {
                           onPlay: (i) => audio.playAudio(card.backAttachments
                               .where((a) => a.type == AttachmentType.audio)
                               .toList()[i]
-                              .src),
+                              .dataUrl),
                         ),
                       ],
                     ),

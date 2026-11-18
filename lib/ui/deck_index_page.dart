@@ -21,7 +21,6 @@ class DeckIndexPage extends StatelessWidget {
       await appDb.insertDeck(Deck(
         id: newId(),
         name: name.trim(),
-        keepAttachmentsOffline: false,
         createdAt: DateTime.now().millisecondsSinceEpoch,
       ));
     } catch (e) {

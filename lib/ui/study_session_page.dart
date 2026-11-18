@@ -283,7 +283,7 @@ class _StudySessionPageState extends State<StudySessionPage> {
                     audio.playAudio(card.frontAttachments
                         .where((a) => a.type == AttachmentType.audio)
                         .toList()[i]
-                        .src);
+                        .dataUrl);
                   },
                 ),
               ],
@@ -308,7 +308,7 @@ class _StudySessionPageState extends State<StudySessionPage> {
                     onPlay: (i) => audio.playAudio(card.backAttachments
                         .where((a) => a.type == AttachmentType.audio)
                         .toList()[i]
-                        .src),
+                        .dataUrl),
                   ),
                 ],
               ),
