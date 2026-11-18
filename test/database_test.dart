@@ -43,6 +43,27 @@ void main() {
     expect((await db.watchDecks().first).single.name, 'Renamed');
   });
 
+  test('cached watch streams replay the latest value to late subscribers',
+      () async {
+    await db.insertDeck(Deck(
+        id: 'd1', name: 'D', keepAttachmentsOffline: false, createdAt: 1));
+    await db.insertCard(CardDoc(
+      id: 'c1',
+      deckId: 'd1',
+      front: 'f',
+      back: 'b',
+      frontAttachments: const [],
+      backAttachments: const [],
+      due: '2026-01-01T00:00:00.000Z',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+    await db.watchDecks().first;
+    expect((await db.watchDecks().first).single.id, 'd1');
+    await db.watchCards('d1').first;
+    expect((await db.watchCards('d1').first).single.id, 'c1');
+  });
+
   test('card insert with attachments round-trips', () async {
     await db.insertDeck(Deck(
         id: 'd1', name: 'D', keepAttachmentsOffline: false, createdAt: 1));

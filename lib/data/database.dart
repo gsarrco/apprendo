@@ -75,7 +75,8 @@ class AppDatabase extends _$AppDatabase {
     if (_decksStream != null) return _decksStream!;
     final query = select(decks)
       ..orderBy([(d) => OrderingTerm.asc(d.createdAt)]);
-    return _decksStream = query.watch().map((rows) => rows.map(_deckFromRow).toList()).asBroadcastStream();
+    return _decksStream = _LatestStream(
+        query.watch().map((rows) => rows.map(_deckFromRow).toList()));
   }
 
   Future<Deck?> getDeck(String id) async {
@@ -136,7 +137,7 @@ class AppDatabase extends _$AppDatabase {
       final query = select(cards)
         ..where((c) => c.deckId.equals(deckId))
         ..orderBy([(c) => OrderingTerm.asc(c.createdAt)]);
-      return query.watch().asyncMap(_attachToRows).asBroadcastStream();
+      return _LatestStream(query.watch().asyncMap(_attachToRows));
     });
   }
 
@@ -506,6 +507,54 @@ class AppDatabase extends _$AppDatabase {
     if (ids.isEmpty) return;
     await (update(cardAttachments)..where((a) => a.id.isIn(ids))).write(
       const CardAttachmentsCompanion(blobContent: Value(null)),
+    );
+  }
+}
+
+/// Broadcast wrapper around a database watch that re-emits the latest
+/// value to every new subscriber, so pages opened later (e.g. the deck
+/// detail page joining the deck stream already listened to by the deck
+/// index) immediately see the current data instead of waiting for the
+/// next table change.
+class _LatestStream<T> extends Stream<T> {
+  _LatestStream(Stream<T> source) {
+    source.listen((v) {
+      _last = v;
+      _hasLast = true;
+      _controller.add(v);
+    }, onError: _controller.addError, onDone: _controller.close);
+  }
+
+  final _controller = StreamController<T>.broadcast();
+  T? _last;
+  bool _hasLast = false;
+
+  @override
+  bool get isBroadcast => true;
+
+  @override
+  StreamSubscription<T> listen(void Function(T)? onData,
+      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+    late StreamSubscription<T> sourceSub;
+    final bridge = StreamController<T>(
+      onCancel: () => sourceSub.cancel(),
+    );
+    if (_hasLast) {
+      Future<void>.delayed(Duration.zero, () {
+        final last = _last;
+        if (last != null && bridge.hasListener) bridge.add(last);
+      });
+    }
+    sourceSub = _controller.stream.listen(
+      bridge.add,
+      onError: bridge.addError,
+      onDone: bridge.close,
+    );
+    return bridge.stream.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
     );
   }
 }

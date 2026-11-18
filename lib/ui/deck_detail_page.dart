@@ -103,18 +103,9 @@ class _DeckDetailPageState extends State<DeckDetailPage> {
           appBar: AppBar(
             title: InkWell(
               onTap: deck == null ? null : () => _renameDeck(deck),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    deck?.name ?? '…',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  Text(
-                    'Decks',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
+              child: Text(
+                deck?.name ?? '',
+                style: const TextStyle(fontSize: 18),
               ),
             ),
             actions: [
