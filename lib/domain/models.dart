@@ -2,6 +2,9 @@
 /// the document shapes the original app persisted and exchanged.
 library;
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 enum AttachmentType { image, audio }
 
 class Language {
@@ -14,27 +17,26 @@ class Language {
 class Deck {
   final String id;
   final String name;
-  final bool keepAttachmentsOffline;
   final int createdAt;
 
   const Deck({
     required this.id,
     required this.name,
-    required this.keepAttachmentsOffline,
     required this.createdAt,
   });
 }
 
 class CardAttachment {
   final AttachmentType type;
-  final String? url;
+
+  /// Mime type of [content], e.g. 'image/jpeg' or 'audio/ogg'.
+  final String mimeType;
+
+  /// The raw file bytes. Attachments always live in the database.
+  final Uint8List content;
   final String caption;
   final String? attribution;
   final String? languageQid;
-
-  /// Base64 data URL of the media (either an uploaded file or a downloaded
-  /// offline copy of [url]).
-  final String? blobContent;
   final int createdAt;
 
   /// Local database row id, when the attachment was loaded from storage.
@@ -42,28 +44,28 @@ class CardAttachment {
 
   const CardAttachment({
     required this.type,
-    this.url,
+    required this.mimeType,
+    required this.content,
     this.caption = '',
     this.attribution,
     this.languageQid,
-    this.blobContent,
     required this.createdAt,
     this.rowId,
   });
 
   CardAttachment copyWith({int? rowId}) => CardAttachment(
         type: type,
-        url: url,
+        mimeType: mimeType,
+        content: content,
         caption: caption,
         attribution: attribution,
         languageQid: languageQid,
-        blobContent: blobContent,
         createdAt: createdAt,
         rowId: rowId ?? this.rowId,
       );
 
-  /// The single resolution rule for rendering any attachment.
-  String get src => blobContent ?? url ?? '';
+  /// Data URL form of [content], for players that need a URI source.
+  String get dataUrl => 'data:$mimeType;base64,${base64Encode(content)}';
 }
 
 class CardDoc {

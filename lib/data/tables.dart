@@ -5,8 +5,6 @@ import 'package:drift/drift.dart';
 class Decks extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
-  BoolColumn get keepAttachmentsOffline =>
-      boolean().withDefault(const Constant(false))();
   IntColumn get createdAt => integer()();
 
   @override
@@ -57,13 +55,15 @@ class CardAttachments extends Table {
 
   /// Either 'image' or 'audio'.
   TextColumn get type => text()();
-  TextColumn get url => text().nullable()();
   TextColumn get caption => text().withDefault(const Constant(''))();
   TextColumn get attribution => text().nullable()();
   TextColumn get languageQid => text().nullable()();
 
-  /// Base64 data URL cached for offline use.
-  TextColumn get blobContent => text().nullable()();
+  /// The raw file bytes. Attachments are always stored in the database.
+  BlobColumn get content => blob()();
+
+  /// Mime type of [content], e.g. 'image/jpeg' or 'audio/ogg'.
+  TextColumn get mimeType => text()();
   IntColumn get createdAt => integer()();
 }
 

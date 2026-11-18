@@ -1,12 +1,15 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import '../data/database.dart';
 import '../domain/models.dart';
+import '../services/media_download.dart';
 
-const int exportFormatVersion = 1;
+const int exportFormatVersion = 2;
 
-/// The `apprendo-export` JSON envelope, byte-compatible with the original
-/// web app's format (version 1).
+/// The `apprendo-export` JSON envelope (version 2). Attachments carry
+/// raw file bytes (base64 `content` + `mime_type`); remote urls are no
+/// longer part of the format.
 class ExportFile {
   final int exportedAt;
   final List<Deck> decks;
@@ -37,7 +40,6 @@ class ExportFile {
   Map<String, dynamic> _deckToJson(Deck d) => {
         'id': d.id,
         'name': d.name,
-        'keep_attachments_offline': d.keepAttachmentsOffline,
         'createdAt': d.createdAt,
       };
 
@@ -64,11 +66,11 @@ class ExportFile {
 
   Map<String, dynamic> _attachmentToJson(CardAttachment a) => {
         'type': a.type == AttachmentType.audio ? 'audio' : 'image',
-        'url': a.url,
+        'mime_type': a.mimeType,
+        'content': base64Encode(a.content),
         'caption': a.caption,
         'attribution': a.attribution,
         'language_qid': a.languageQid,
-        'blob_content': a.blobContent,
         'createdAt': a.createdAt,
       };
 
@@ -150,7 +152,6 @@ ExportFile parseExport(String text) {
         Deck(
           id: d['id'] as String,
           name: d['name'] as String? ?? '',
-          keepAttachmentsOffline: d['keep_attachments_offline'] as bool? ?? false,
           createdAt: (d['createdAt'] as num?)?.toInt() ?? 0,
         ),
     ],
@@ -206,22 +207,48 @@ ExportFile parseExport(String text) {
   );
 }
 
+/// Attachments carry raw file bytes (base64 `content` + `mime_type`).
+/// A pre-v2 `blob_content` data URL still embeds real bytes, so those are
+/// harvested too; everything without recoverable bytes (old url-only
+/// attachments, malformed content) is skipped.
 List<CardAttachment> _attachmentsFromJson(dynamic json) {
   if (json is! List) return const [];
-  return [
-    for (final a in json.cast<Map<String, dynamic>>())
-      CardAttachment(
-        type: a['type'] == 'audio'
-            ? AttachmentType.audio
-            : AttachmentType.image,
-        url: a['url'] as String?,
-        caption: a['caption'] as String? ?? '',
-        attribution: a['attribution'] as String?,
-        languageQid: a['language_qid'] as String?,
-        blobContent: a['blob_content'] as String?,
-        createdAt: (a['createdAt'] as num?)?.toInt() ?? 0,
-      ),
-  ];
+  final out = <CardAttachment>[];
+  for (final raw in json.cast<Map<String, dynamic>>()) {
+    Uint8List? content;
+    var mimeType = raw['mime_type'] as String? ?? 'application/octet-stream';
+    if (raw['content'] is String) {
+      content = _decodeBase64(raw['content']);
+    } else if (raw['blob_content'] is String) {
+      final parsed = parseDataUrl(raw['blob_content'] as String);
+      if (parsed != null) {
+        if (raw['mime_type'] == null) mimeType = parsed.mimeType;
+        content = parsed.bytes;
+      }
+    }
+    if (content == null) continue;
+    out.add(CardAttachment(
+      type: raw['type'] == 'audio'
+          ? AttachmentType.audio
+          : AttachmentType.image,
+      mimeType: mimeType,
+      content: content,
+      caption: raw['caption'] as String? ?? '',
+      attribution: raw['attribution'] as String?,
+      languageQid: raw['language_qid'] as String?,
+      createdAt: (raw['createdAt'] as num?)?.toInt() ?? 0,
+    ));
+  }
+  return out;
+}
+
+Uint8List? _decodeBase64(dynamic value) {
+  if (value is! String) return null;
+  try {
+    return base64Decode(value);
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Restores an export into the database. Same ids are overwritten.

@@ -28,8 +28,12 @@ spec**: fix whichever deviates from it, never just make red tests green.
 
 `scripts/dev.sh` builds the debug APK, boots the Android 17 Cuttlefish
 emulator (QEMU/KVM, arm64) if needed, installs and launches the app, and
-opens a VNC window (the WebRTC operator UI cannot show video — its frame
-source is crosvm-only; use the VNC viewer at `localhost:6444`).
+opens a scrcpy mirror (installed from the `zeno/scrcpy` COPR — it is not
+in Fedora's official repos; it streams H.264 over adb and is much
+smoother than the alternatives). `scripts/dev.sh screen` reopens it. The
+WebRTC operator UI cannot show video (its frame source is crosvm-only);
+the VNC viewer at `localhost:6444` (`scripts/dev.sh vnc`) remains the
+fallback.
 
 ```bash
 scripts/dev.sh        # build + boot if needed + install + open screen
@@ -52,8 +56,9 @@ the emulator fails to boot, read `~/Android/cf/work/run_cvd.out` and
     dart run build_runner build --delete-conflicting-outputs
     ```
 
-- `schemaVersion` is 1 with an `onUpgrade` scaffold; future schema
-  changes must bump it and add migrations.
+- `schemaVersion` is 2 (v1→v2 migrated attachments to raw bytes and
+  dropped the per-deck "save attachments" flag); future schema changes
+  must bump it and add migrations.
 - `AppDatabase` is a singleton via the `appDb` getter in `lib/app.dart`.
   Never construct `AppDatabase` directly outside tests — drift warns
   about two instances sharing one file (race/corruption risk).
@@ -70,9 +75,12 @@ the emulator fails to boot, read `~/Android/cf/work/run_cvd.out` and
   to avoid clashing with Flutter's `Card` widget.
 - Dates crossing the FSRS boundary are ISO-8601 UTC strings via
   `toIsoUtc`/`parseIso` (`lib/fsrs/mappers.dart`).
-- Export/import must stay byte-compatible with `apprendo-export` v1
-  (`lib/export/export_file.dart`). The encoder/decoder round-trip and
-  the web app's fixtures (`test/fixtures/web_*.json`) are the spec.
+- Export/import uses the `apprendo-export` v2 format
+  (`lib/export/export_file.dart`): attachments carry raw bytes only
+  (`mime_type` + base64 `content`); there is no url field, and the format
+  is not compatible with the original web app's v1 files (url-only
+  attachments are skipped on import). The encoder/decoder round-trip and
+  the old fixtures (`test/fixtures/web_*.json`) exercise both paths.
 
 ## Style
 

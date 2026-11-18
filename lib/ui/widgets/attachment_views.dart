@@ -1,10 +1,8 @@
-import 'dart:convert';
-
 import 'package:material_ui/material_ui.dart';
 
 import '../../domain/models.dart';
 
-/// Renders any attachment source: base64 data URLs, or http(s) URLs.
+/// Renders an attachment from its raw bytes.
 class AttachmentImage extends StatelessWidget {
   final CardAttachment attachment;
   final double? width;
@@ -21,19 +19,8 @@ class AttachmentImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final src = attachment.src;
-    ImageProvider provider;
-    if (src.startsWith('data:')) {
-      final comma = src.indexOf(',');
-      final payload = src.substring(comma + 1);
-      provider = MemoryImage(base64Decode(payload));
-    } else if (src.startsWith('http')) {
-      provider = NetworkImage(src);
-    } else {
-      return const SizedBox.shrink();
-    }
     return Image(
-      image: provider,
+      image: MemoryImage(attachment.content),
       width: width,
       height: height,
       fit: fit,

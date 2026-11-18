@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/database.dart';
@@ -9,6 +11,8 @@ import '../../services/languages.dart';
 import 'media_search.dart';
 
 enum _SideTab { text, pronunciation, image }
+
+enum _Step { front, back }
 
 /// Add/edit card form. Each side mixes text, pronunciation audio and
 /// images; new cards inherit the tab and language of the deck's most
@@ -32,6 +36,8 @@ class CardForm extends StatefulWidget {
 }
 
 class _CardFormState extends State<CardForm> {
+  _Step _step = _Step.front;
+  int _stepDirection = -1;
   late final TextEditingController _front;
   late final TextEditingController _back;
   List<CardAttachment> _frontAttachments = [];
@@ -150,7 +156,14 @@ class _CardFormState extends State<CardForm> {
     _back.clear();
     _frontAttachments = [];
     _backAttachments = [];
+    _step = _Step.front;
+    _stepDirection = -1;
   }
+
+  void _goTo(_Step step) => setState(() {
+        _stepDirection = step == _Step.back ? 1 : -1;
+        _step = step;
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -160,54 +173,131 @@ class _CardFormState extends State<CardForm> {
       children: [
         if (editing)
           Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               'Edit card #${widget.editingCard!.id.length >= 4 ? widget.editingCard!.id.substring(widget.editingCard!.id.length - 4) : widget.editingCard!.id}',
-              style: Theme.of(context).textTheme.labelMedium,
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
-        _CardSideEditor(
-          key: ValueKey('front-${widget.editingCard?.id ?? "new"}-${_frontAttachments.length}-${_front.text}'),
-          heading: 'Front',
-          text: _front,
-          attachments: _frontAttachments,
-          onAttachmentsChange: (v) => setState(() => _frontAttachments = v),
-          defaultTab: _frontDefaultTab,
-          defaultLanguage: _frontDefaultLanguage,
-        ),
-        const SizedBox(height: 8),
-        _CardSideEditor(
-          key: ValueKey('back-${widget.editingCard?.id ?? "new"}-${_backAttachments.length}-${_back.text}'),
-          heading: 'Back',
-          text: _back,
-          attachments: _backAttachments,
-          onAttachmentsChange: (v) => setState(() => _backAttachments = v),
-          defaultTab: _backDefaultTab,
-          defaultLanguage: _backDefaultLanguage,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            FilledButton.icon(
-              onPressed: _busy ? null : _submit,
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(editing ? 'Edit card' : 'Add card'),
+        if (!editing)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'New card',
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
-            if (editing) ...[
-              const SizedBox(width: 8),
-              OutlinedButton(
-                onPressed: () {
-                  _reset();
-                  widget.onDone?.call();
-                },
-                child: const Text('Cancel'),
-              ),
-            ],
-          ],
+          ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOutCubic,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            switchInCurve: Curves.easeInOutCubic,
+            switchOutCurve: Curves.easeInOutCubic,
+            transitionBuilder: (child, animation) {
+              final incoming = child.key == ValueKey(_step);
+              final half = math.pi / 2;
+              final progress =
+                  incoming ? animation : ReverseAnimation(animation);
+              final angle = Tween<double>(
+                begin: incoming ? -_stepDirection * half : 0,
+                end: incoming ? 0 : _stepDirection * half,
+              ).animate(progress);
+              return ClipRect(
+                child: AnimatedBuilder(
+                  animation: angle,
+                  builder: (context, _) => Transform(
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.0015)
+                      ..rotateY(angle.value),
+                    alignment: Alignment.center,
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: switch (_step) {
+              _Step.front => _frontStep(editing),
+              _Step.back => _backStep(editing),
+            },
+          ),
         ),
       ],
     );
   }
+
+  Widget _frontStep(bool editing) => Column(
+        key: const ValueKey(_Step.front),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _CardSideEditor(
+            key: ValueKey('front-${widget.editingCard?.id ?? "new"}-${_frontAttachments.length}-${_front.text}'),
+            heading: 'Front',
+            text: _front,
+            attachments: _frontAttachments,
+            onAttachmentsChange: (v) => setState(() => _frontAttachments = v),
+            defaultTab: _frontDefaultTab,
+            defaultLanguage: _frontDefaultLanguage,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: _busy ? null : () => _goTo(_Step.back),
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                label: const Text('Back'),
+              ),
+              if (editing) _cancelButton(),
+            ],
+          ),
+        ],
+      );
+
+  Widget _backStep(bool editing) => Column(
+        key: const ValueKey(_Step.back),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _CardSideEditor(
+            key: ValueKey('back-${widget.editingCard?.id ?? "new"}-${_backAttachments.length}-${_back.text}'),
+            heading: 'Back',
+            text: _back,
+            attachments: _backAttachments,
+            onAttachmentsChange: (v) => setState(() => _backAttachments = v),
+            defaultTab: _backDefaultTab,
+            defaultLanguage: _backDefaultLanguage,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _busy ? null : () => _goTo(_Step.front),
+                icon: const Icon(Icons.arrow_back, size: 18),
+                label: const Text('Front'),
+              ),
+              FilledButton.icon(
+                onPressed: _busy ? null : _submit,
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Done'),
+              ),
+              if (editing) _cancelButton(),
+            ],
+          ),
+        ],
+      );
+
+  Widget _cancelButton() => OutlinedButton(
+        onPressed: () {
+          _reset();
+          widget.onDone?.call();
+        },
+        child: const Text('Cancel'),
+      );
 }
 
 class _CardSideEditor extends StatefulWidget {
