@@ -24,27 +24,25 @@ the real `ts-fsrs` (`test/fixtures/golden.json`) — if a test and the
 implementation disagree, the **web app in git history is the behavioral
 spec**: fix whichever deviates from it, never just make red tests green.
 
-## Emulator and dev workflow
+## Device and dev workflow
 
-`scripts/dev.sh` builds the debug APK, boots the Android 17 Cuttlefish
-emulator (QEMU/KVM, arm64) if needed, installs and launches the app, and
-opens a scrcpy mirror (installed from the `zeno/scrcpy` COPR — it is not
-in Fedora's official repos; it streams H.264 over adb and is much
-smoother than the alternatives). `scripts/dev.sh screen` reopens it. The
-WebRTC operator UI cannot show video (its frame source is crosvm-only);
-the VNC viewer at `localhost:6444` (`scripts/dev.sh vnc`) remains the
-fallback.
+Development runs on a physical Android phone over Wi-Fi (wireless)
+debugging — there is no emulator on this machine. `scripts/dev.sh`
+listens for wireless-debugging devices for up to 10 seconds
+(`FIND_TIMEOUT`), takes the first one found, builds the debug APK
+(arm64, applicationId `study.apprendo.debug`, demo data seeded via the
+`SEED_DEMO` dart-define, default true), and installs and launches it on
+that device. If no device appears within the timeout it fails with the
+reason. The phone must have Wireless debugging enabled and have been
+paired to this computer once (`adb pair <ip:port> <code>`);
+paired devices are discovered automatically over mDNS.
 
 ```bash
-scripts/dev.sh        # build + boot if needed + install + open screen
-scripts/dev.sh down   # graceful stop, app data is kept
-scripts/dev.sh status # state of emulator / adb / app
+scripts/dev.sh        # find device + build + install + launch
+scripts/dev.sh build  # build the debug APK only
+scripts/dev.sh status # list wireless-debugging devices + app state
+scripts/dev.sh logs   # follow Flutter logs from the phone
 ```
-
-The script applies two required host-side patches at boot (RIL fields in
-the cuttlefish config, `androidboot.boot_devices` in the bootconfig). If
-the emulator fails to boot, read `~/Android/cf/work/run_cvd.out` and
-`cuttlefish/instances/cvd-1/kernel.log` — do not remove those patches.
 
 ## Data layer (Drift)
 
@@ -130,4 +128,4 @@ the emulator fails to boot, read `~/Android/cf/work/run_cvd.out` and
 - `lib/services/` — Commons API, languages, audio, offline attachments.
 - `lib/ui/` — pages and widgets (one feature per file).
 - `test/` — golden/DB/format/widget tests.
-- `scripts/dev.sh` — emulator + build workflow.
+- `scripts/dev.sh` — device discovery + build + install workflow.

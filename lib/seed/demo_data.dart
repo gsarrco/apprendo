@@ -6,7 +6,7 @@ import '../fsrs/fsrs.dart';
 import '../fsrs/mappers.dart';
 
 /// Populates an empty database with realistic fake data so the app can be
-/// explored on an emulator or a fresh install. Only used when the app is
+/// explored on a phone or a fresh install. Only used when the app is
 /// started with `--dart-define=SEED_DEMO=true` and the database is empty.
 Future<void> seedDemoData(AppDatabase db) async {
   if (await db.getDeck('demo-it') != null) return;

@@ -49,7 +49,7 @@ lib/services/         Commons API, languages, audio, offline storage
 lib/seed/             Demo data for development builds
 lib/ui/               Pages and widgets (one feature per file)
 test/                 Unit, database, export-round-trip and widget tests
-scripts/dev.sh        Build + emulator + install workflow
+scripts/dev.sh        Device + build + install workflow
 ```
 
 ## Getting started
@@ -65,27 +65,29 @@ flutter test
 
 ## Development workflow
 
-`scripts/dev.sh` is the one-command loop for this repo. It builds the
-debug APK, boots the Android 17 (API 37) Cuttlefish emulator if needed,
-installs the app, launches it, and opens a VNC window with the device
-screen:
+`scripts/dev.sh` is the one-command loop for this repo. It listens for
+Android phones in Wi-Fi debugging mode for up to 10 seconds, takes the
+first one it finds, builds the debug APK (applicationId
+`study.apprendo.debug`, demo data seeded when the database is empty),
+and installs and launches it on the device:
 
 ```bash
-scripts/dev.sh            # build + boot emulator if needed + install + open screen
-scripts/dev.sh status      # emulator / adb / app state
-scripts/dev.sh down        # stop the emulator (app data is kept)
+scripts/dev.sh            # find device + build + install + launch
+scripts/dev.sh status      # list wireless-debugging devices / app state
 scripts/dev.sh logs        # follow Flutter logs from the app
 ```
 
-The emulator is a Google Cuttlefish virtual device (Android 17, arm64,
-Pixel 9a display) running under QEMU/KVM. Two host-side patches are
-applied automatically at boot and live in `scripts/dev.sh`:
+The phone needs Wireless debugging enabled (Settings → Developer
+options → Wireless debugging) and must be paired to this computer
+once — under Wireless debugging → *Pair device with pairing code*:
 
-- the RIL network fields in `cuttlefish_config.json` (the release host
-  tools leave them empty, which breaks QEMU's slirp networking), and
-- `androidboot.boot_devices` in the guest bootconfig (this QEMU build
-  places the PCIe ECAM at `0x3f000000`, while the host tools hardcode
-  the high-MMIO address).
+```bash
+adb pair <ip:port> <code>
+```
+
+After pairing, the device is discovered automatically over mDNS
+whenever it is on the same network with Wireless debugging on. If no
+device shows up within 10 seconds, the script fails and says why.
 
 ## Building the APK
 
