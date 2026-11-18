@@ -2,7 +2,7 @@ name: apprendo
 description: >-
   Create flashcard decks and study them on a spaced-repetition schedule.
 publish_to: 'none'
-version: 2.0.0
+version: 2.1.0+2
 
 environment:
   sdk: ^3.14.0
