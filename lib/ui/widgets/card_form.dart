@@ -67,6 +67,13 @@ class _CardFormState extends State<CardForm> {
     }
   }
 
+  @override
+  void dispose() {
+    _front.dispose();
+    _back.dispose();
+    super.dispose();
+  }
+
   static _SideTab _defaultTab(List<CardAttachment> a) {
     if (a.any((x) => x.type == AttachmentType.image)) return _SideTab.image;
     if (a.any((x) => x.type == AttachmentType.audio)) {
@@ -233,7 +240,7 @@ class _CardFormState extends State<CardForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _CardSideEditor(
-            key: ValueKey('front-${widget.editingCard?.id ?? "new"}-${_frontAttachments.length}-${_front.text}'),
+            key: const ValueKey('front-editor'),
             heading: 'Front',
             text: _front,
             attachments: _frontAttachments,
@@ -262,7 +269,7 @@ class _CardFormState extends State<CardForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _CardSideEditor(
-            key: ValueKey('back-${widget.editingCard?.id ?? "new"}-${_backAttachments.length}-${_back.text}'),
+            key: const ValueKey('back-editor'),
             heading: 'Back',
             text: _back,
             attachments: _backAttachments,

@@ -87,6 +87,7 @@ class _DeckDetailPageState extends State<DeckDetailPage> {
                   ),
                   const SizedBox(height: 16),
                   CardForm(
+                    key: ValueKey('card-form-${editingCard?.id ?? 'new'}'),
                     deckId: widget.deckId,
                     editingCard: editingCard,
                     latestCard: latestCard,
