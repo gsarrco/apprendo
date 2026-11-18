@@ -59,7 +59,6 @@ void main() {
     await db.insertDeck(Deck(
       id: 'd1',
       name: 'Dutch Nouns',
-      keepAttachmentsOffline: false,
       createdAt: 100,
     ));
     await db.insertStudyTag(StudyTag(

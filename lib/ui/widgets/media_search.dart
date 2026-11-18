@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../domain/models.dart';
 import '../../services/commons_api.dart';
 import '../../services/languages.dart';
+import '../../services/media_download.dart';
 import '../../services/audio_service.dart' as audio;
 import 'attachment_views.dart';
 
@@ -36,6 +37,7 @@ class _MediaSearchState extends State<MediaSearch> {
   final _query = TextEditingController();
   bool _loading = false;
   List<CommonsMedium> _results = const [];
+  final Set<String> _downloading = {};
 
   @override
   void initState() {
@@ -58,16 +60,15 @@ class _MediaSearchState extends State<MediaSearch> {
       } catch (_) {
         continue;
       }
-      final dataUrl =
-          'data:application/octet-stream;base64,${base64Encode(bytes)}';
-      if (next.any((s) => s.src == dataUrl)) continue;
+      final data = base64Encode(bytes);
+      if (next.any((s) => base64Encode(s.content) == data)) continue;
       next.add(CardAttachment(
         type: widget.type,
-        url: null,
+        mimeType: mimeFromFileName(file.name),
+        content: bytes,
         caption: file.name.replaceFirst(RegExp(r'\.[^.]+$'), ''),
         attribution: null,
         languageQid: null,
-        blobContent: dataUrl,
         createdAt: DateTime.now().millisecondsSinceEpoch,
       ));
     }
@@ -100,28 +101,46 @@ class _MediaSearchState extends State<MediaSearch> {
     }
   }
 
-  void _toggle(CommonsMedium m) {
+  /// Commons picks are downloaded immediately: attachments are always
+  /// stored in the database, never kept as remote urls.
+  Future<void> _toggle(CommonsMedium m) async {
     if (widget.type == AttachmentType.audio) {
       audio.playAudio(m.url);
     }
-    if (widget.selected.any((s) => s.url == m.url)) {
-      widget.onChange(
-          widget.selected.where((s) => s.url != m.url).toList());
+    final caption = captionFromTitle(m.title, widget.type);
+    final selected = widget.selected
+        .where((s) => s.type == widget.type && s.caption == caption)
+        .toList();
+    if (selected.isNotEmpty) {
+      widget.onChange(widget.selected.where((s) => s != selected.first).toList());
       return;
     }
-    widget.onChange([
-      ...widget.selected,
-      CardAttachment(
-        type: widget.type,
-        url: m.url,
-        caption: captionFromTitle(m.title, widget.type),
-        attribution: attributionOf(m),
-        languageQid:
-            widget.type == AttachmentType.audio ? _language?.qid : null,
-        blobContent: null,
-        createdAt: DateTime.now().millisecondsSinceEpoch,
-      ),
-    ]);
+    if (_downloading.contains(m.url)) return;
+    setState(() => _downloading.add(m.url));
+    try {
+      final media = await downloadMedia(m.url);
+      widget.onChange([
+        ...widget.selected,
+        CardAttachment(
+          type: widget.type,
+          mimeType: media.mimeType,
+          content: media.bytes,
+          caption: caption,
+          attribution: attributionOf(m),
+          languageQid:
+              widget.type == AttachmentType.audio ? _language?.qid : null,
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+        ),
+      ]);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not download ${widget.type.name}: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _downloading.remove(m.url));
+    }
   }
 
   @override
@@ -186,11 +205,14 @@ class _MediaSearchState extends State<MediaSearch> {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) {
                 final m = _results[i];
-                final selected = widget.selected.any((s) => s.url == m.url);
+                final caption = captionFromTitle(m.title, widget.type);
+                final selected = widget.selected
+                    .any((s) => s.type == widget.type && s.caption == caption);
+                final downloading = _downloading.contains(m.url);
                 return SizedBox(
                   width: 130,
                   child: InkWell(
-                    onTap: () => _toggle(m),
+                    onTap: downloading ? null : () => _toggle(m),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       decoration: BoxDecoration(
@@ -206,18 +228,27 @@ class _MediaSearchState extends State<MediaSearch> {
                       child: Column(
                         children: [
                           Expanded(
-                            child: widget.type == AttachmentType.image
-                                ? Image.network(
-                                    m.url,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) =>
-                                        const Icon(Icons.broken_image),
+                            child: downloading
+                                ? const Center(
+                                    child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    ),
                                   )
-                                : const Icon(Icons.volume_up_outlined),
+                                : widget.type == AttachmentType.image
+                                    ? Image.network(
+                                        m.url,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) =>
+                                            const Icon(Icons.broken_image),
+                                      )
+                                    : const Icon(Icons.volume_up_outlined),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            captionFromTitle(m.title, widget.type),
+                            caption,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall,
@@ -275,7 +306,7 @@ class AttachmentTray extends StatelessWidget {
       itemBuilder: (context, i) {
         final item = items[i];
         return ListTile(
-          key: ValueKey('${item.src}-${item.createdAt}-$i'),
+          key: ValueKey('${item.createdAt}-${item.content.length}-$i'),
           contentPadding: const EdgeInsets.symmetric(horizontal: 0),
           leading: ReorderableDragStartListener(
             index: i,
@@ -315,14 +346,13 @@ class AttachmentTray extends StatelessWidget {
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.play_arrow, size: 20),
-                  onPressed: () => audio.playAudio(item.src),
+                  onPressed: () => audio.playAudio(item.dataUrl),
                 ),
               IconButton(
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.close, size: 18),
-                onPressed: () => onChange(items
-                    .where((x) => x.src != item.src)
-                    .toList()),
+                onPressed: () => onChange(
+                    [for (final (j, x) in items.indexed) if (j != i) x]),
               ),
             ],
           ),

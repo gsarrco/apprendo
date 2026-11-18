@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:apprendo/data/database.dart';
 import 'package:apprendo/domain/models.dart';
 import 'package:apprendo/export/export_file.dart';
 import 'package:drift/native.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 void main() {
   late AppDatabase db;
@@ -34,7 +36,6 @@ void main() {
     await db.insertDeck(Deck(
       id: 'd1',
       name: 'Deck One',
-      keepAttachmentsOffline: false,
       createdAt: 100,
     ));
     final decks = await db.watchDecks().first;
@@ -43,9 +44,30 @@ void main() {
     expect((await db.watchDecks().first).single.name, 'Renamed');
   });
 
+  test('cached watch streams replay the latest value to late subscribers',
+      () async {
+    await db.insertDeck(Deck(
+        id: 'd1', name: 'D', createdAt: 1));
+    await db.insertCard(CardDoc(
+      id: 'c1',
+      deckId: 'd1',
+      front: 'f',
+      back: 'b',
+      frontAttachments: const [],
+      backAttachments: const [],
+      due: '2026-01-01T00:00:00.000Z',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+    await db.watchDecks().first;
+    expect((await db.watchDecks().first).single.id, 'd1');
+    await db.watchCards('d1').first;
+    expect((await db.watchCards('d1').first).single.id, 'c1');
+  });
+
   test('card insert with attachments round-trips', () async {
     await db.insertDeck(Deck(
-        id: 'd1', name: 'D', keepAttachmentsOffline: false, createdAt: 1));
+        id: 'd1', name: 'D', createdAt: 1));
     final card = CardDoc(
       id: 'c1',
       deckId: 'd1',
@@ -54,16 +76,17 @@ void main() {
       frontAttachments: [
         CardAttachment(
           type: AttachmentType.image,
-          url: 'https://example.com/a.png',
+          mimeType: 'image/png',
+          content: Uint8List.fromList([1, 2, 3]),
           caption: 'a',
           attribution: 'Author — CC',
           createdAt: 5,
         ),
         CardAttachment(
           type: AttachmentType.audio,
-          url: null,
+          mimeType: 'audio/ogg',
+          content: Uint8List.fromList([4, 5]),
           caption: 'clip',
-          blobContent: 'data:audio/ogg;base64,AAA',
           createdAt: 6,
         ),
       ],
@@ -78,8 +101,11 @@ void main() {
     expect(loaded.frontAttachments.length, 2);
     expect(loaded.frontAttachments[0].type, AttachmentType.image);
     expect(loaded.frontAttachments[0].attribution, 'Author — CC');
-    expect(loaded.frontAttachments[1].blobContent, 'data:audio/ogg;base64,AAA');
     expect(loaded.frontAttachments[1].type, AttachmentType.audio);
+    expect(loaded.frontAttachments[1].mimeType, 'audio/ogg');
+    expect(loaded.frontAttachments[1].content, [4, 5]);
+    expect(loaded.frontAttachments[0].mimeType, 'image/png');
+    expect(loaded.frontAttachments[0].content, [1, 2, 3]);
     // ordering preserved
     expect(loaded.frontAttachments[0].caption, 'a');
   });
@@ -87,7 +113,7 @@ void main() {
   test('deleting a deck cascades to cards and attachments but keeps logs',
       () async {
     await db.insertDeck(Deck(
-        id: 'd1', name: 'D', keepAttachmentsOffline: false, createdAt: 1));
+        id: 'd1', name: 'D', createdAt: 1));
     await db.insertCard(newCard('c1', 'd1'));
     await db.insertReviewLog(ReviewLog(
       id: 'l1',
@@ -111,9 +137,9 @@ void main() {
 
   test('watchDueCards filters by due date and deck', () async {
     await db.insertDeck(Deck(
-        id: 'd1', name: 'D', keepAttachmentsOffline: false, createdAt: 1));
+        id: 'd1', name: 'D', createdAt: 1));
     await db.insertDeck(Deck(
-        id: 'd2', name: 'D2', keepAttachmentsOffline: false, createdAt: 2));
+        id: 'd2', name: 'D2', createdAt: 2));
     final now = DateTime.now();
     await db.insertCard(newCard('c1', 'd1',
         due: now.toIso8601String()));
@@ -129,9 +155,9 @@ void main() {
 
   test('study tag deck membership updates', () async {
     await db.insertDeck(Deck(
-        id: 'd1', name: 'D', keepAttachmentsOffline: false, createdAt: 1));
+        id: 'd1', name: 'D', createdAt: 1));
     await db.insertDeck(Deck(
-        id: 'd2', name: 'D2', keepAttachmentsOffline: false, createdAt: 2));
+        id: 'd2', name: 'D2', createdAt: 2));
     await db.insertStudyTag(StudyTag(
         id: 't1', name: 'Tag', deckIds: ['d1'], createdAt: 3));
     await db.setStudyTagDecks('t1', ['d1', 'd2']);
@@ -141,48 +167,72 @@ void main() {
     expect((await db.getStudyTag('t1'))!.deckIds, ['d2']);
   });
 
-  test('offline attachment download bookkeeping', () async {
-    await db.insertDeck(Deck(
-        id: 'd1', name: 'D', keepAttachmentsOffline: false, createdAt: 1));
-    await db.insertCard(CardDoc(
-      id: 'c1',
-      deckId: 'd1',
-      front: 'f',
-      back: 'b',
-      frontAttachments: [
-        CardAttachment(
-            type: AttachmentType.image,
-            url: 'https://example.com/a.png',
-            caption: 'a',
-            createdAt: 5),
-        CardAttachment(
-            type: AttachmentType.image,
-            url: null,
-            caption: 'b',
-            blobContent: 'data:image/png;base64,AAA',
-            createdAt: 6),
-      ],
-      due: DateTime.now().toIso8601String(),
-      createdAt: 1,
-      updatedAt: 1,
-    ));
-    expect(await db.countPendingAttachments('d1'), 1);
-    final card = (await db.getCardsOfDecks(['d1'])).single;
-    final pendingRow = card.frontAttachments
-        .firstWhere((a) => a.blobContent == null);
-    await db.setAttachmentBlob(pendingRow.rowId!, 'data:image/png;base64,BBB');
-    expect(await db.countPendingAttachments('d1'), 0);
-    await db.removeDeckBlobContent('d1');
-    final stripped = (await db.getCardsOfDecks(['d1'])).single;
-    expect(stripped.frontAttachments[0].blobContent, isNull);
-    // the local upload (url == null) keeps its blob
-    expect(stripped.frontAttachments[1].blobContent,
-        'data:image/png;base64,AAA');
+  test('v1 databases migrate attachments to raw bytes', () async {
+    final dir = await Directory.systemTemp.createTemp('apprendo-mig');
+    addTearDown(() => dir.delete(recursive: true));
+    final dbPath = '${dir.path}${Platform.pathSeparator}mig.sqlite';
+
+    final raw = sqlite3.open(dbPath);
+    raw
+      ..execute(
+        'CREATE TABLE decks (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, '
+        'keep_attachments_offline INTEGER NOT NULL DEFAULT 0, '
+        'created_at INTEGER NOT NULL)',
+      )
+      ..execute(
+        'CREATE TABLE cards (id TEXT NOT NULL PRIMARY KEY, deck_id TEXT NOT NULL, '
+        'front TEXT NOT NULL, back TEXT NOT NULL, due TEXT NOT NULL, '
+        'stability REAL NOT NULL DEFAULT 0, difficulty REAL NOT NULL DEFAULT 0, '
+        'elapsed_days INTEGER NOT NULL DEFAULT 0, scheduled_days INTEGER NOT NULL DEFAULT 0, '
+        'learning_steps INTEGER NOT NULL DEFAULT 0, reps INTEGER NOT NULL DEFAULT 0, '
+        'lapses INTEGER NOT NULL DEFAULT 0, state INTEGER NOT NULL DEFAULT 0, '
+        'last_review TEXT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)',
+      )
+      ..execute(
+        'CREATE TABLE card_attachments (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, '
+        'card_id TEXT NOT NULL, side TEXT NOT NULL, position INTEGER NOT NULL, '
+        'type TEXT NOT NULL, url TEXT NULL, caption TEXT NOT NULL DEFAULT \'\', '
+        'attribution TEXT NULL, language_qid TEXT NULL, blob_content TEXT NULL, '
+        'created_at INTEGER NOT NULL)',
+      )
+      ..execute("INSERT INTO decks VALUES ('d1', 'D', 1, 100)")
+      ..execute(
+        "INSERT INTO cards (id, deck_id, front, back, due, last_review, "
+        "created_at, updated_at) VALUES "
+        "('c1', 'd1', 'f', 'b', '2026-01-01T00:00:00.000Z', NULL, 1, 1)",
+      )
+      ..execute(
+        "INSERT INTO card_attachments (card_id, side, position, type, url, caption, "
+        "attribution, language_qid, blob_content, created_at) VALUES "
+        "('c1', 'front', 0, 'image', 'https://example.com/a.png', 'a', NULL, NULL, "
+        "'data:image/png;base64,AAECAw==', 5)",
+      )
+      ..execute(
+        "INSERT INTO card_attachments (card_id, side, position, type, url, caption, "
+        "attribution, language_qid, blob_content, created_at) VALUES "
+        "('c1', 'front', 1, 'image', 'https://example.com/b.png', 'b', NULL, NULL, "
+        "NULL, 6)",
+      )
+      ..execute('PRAGMA user_version = 1')
+      ..close();
+
+    final dbMig = AppDatabase(NativeDatabase(File(dbPath)));
+    addTearDown(dbMig.close);
+
+    final decks = await dbMig.getDecksAll();
+    expect(decks.single.id, 'd1');
+    final card = (await dbMig.getCardsOfDecks(['d1'])).single;
+    // the url-only row is dropped, the base64 blob becomes raw bytes
+    expect(card.frontAttachments, hasLength(1));
+    final migrated = card.frontAttachments.single;
+    expect(migrated.caption, 'a');
+    expect(migrated.mimeType, 'image/png');
+    expect(migrated.content, [0, 1, 2, 3]);
   });
 
   test('export round-trips through JSON', () async {
     await db.insertDeck(Deck(
-        id: 'd1', name: 'D', keepAttachmentsOffline: true, createdAt: 1));
+        id: 'd1', name: 'D', createdAt: 1));
     await db.insertCard(CardDoc(
       id: 'c1',
       deckId: 'd1',
@@ -191,7 +241,8 @@ void main() {
       frontAttachments: [
         CardAttachment(
             type: AttachmentType.audio,
-            url: 'https://example.com/a.ogg',
+            mimeType: 'audio/ogg',
+            content: Uint8List.fromList([1, 2, 3]),
             caption: 'a',
             attribution: 'X — CC',
             languageQid: 'Q1860',
@@ -237,6 +288,8 @@ void main() {
     expect(restored.decks.single.name, 'D');
     final card = restored.cards.single;
     expect(card.frontAttachments.single.languageQid, 'Q1860');
+    expect(card.frontAttachments.single.mimeType, 'audio/ogg');
+    expect(card.frontAttachments.single.content, [1, 2, 3]);
     expect(card.stability, 1.5);
     expect(card.state, 2);
     expect(restored.reviewlogs.single.rating, 3);
@@ -268,9 +321,14 @@ void main() {
     await restoreExport(db, file);
     final restored = await db.getCardsOfDecks(file.decks.map((d) => d.id).toList());
     expect(restored.length, file.cards.length);
+    // Only the pre-v2 attachment that embedded real bytes survives the
+    // bytes-only import; the url-only ones are dropped.
     final withAttachments =
         restored.where((c) => c.frontAttachments.isNotEmpty).toList();
-    expect(withAttachments, isNotEmpty);
+    expect(withAttachments, hasLength(1));
+    final migrated = withAttachments.single.frontAttachments.single;
+    expect(migrated.mimeType, 'image/png');
+    expect(migrated.content, isNotEmpty);
     // Logs referencing cards that no longer exist (deleted on the web app)
     // are still imported — history is append-only.
     final allLogs = await db.select(db.reviewLogs).get();
