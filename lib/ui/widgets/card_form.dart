@@ -173,10 +173,20 @@ class _CardFormState extends State<CardForm> {
       children: [
         if (editing)
           Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               'Edit card #${widget.editingCard!.id.length >= 4 ? widget.editingCard!.id.substring(widget.editingCard!.id.length - 4) : widget.editingCard!.id}',
-              style: Theme.of(context).textTheme.labelMedium,
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        if (!editing)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'New card',
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         AnimatedSize(
