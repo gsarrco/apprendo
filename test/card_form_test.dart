@@ -1,5 +1,7 @@
 import 'package:apprendo/app.dart';
 import 'package:apprendo/data/database.dart';
+import 'package:apprendo/domain/models.dart';
+import 'package:apprendo/ui/deck_detail_page.dart';
 import 'package:apprendo/ui/widgets/card_form.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -73,5 +75,45 @@ void main() {
       findsOneWidget,
     );
     expect(await db.getCardsOfDecks(const ['d1']), isEmpty);
+  });
+
+  testWidgets('prefills the form when a card is selected for editing',
+      (tester) async {
+    await db.insertDeck(Deck(id: 'd1', name: 'Italian', createdAt: 1));
+    await db.insertCard(CardDoc(
+      id: 'card-1',
+      deckId: 'd1',
+      front: 'il gatto',
+      back: 'the cat',
+      due: DateTime.utc(2026, 1, 1).toIso8601String(),
+      createdAt: 2,
+      updatedAt: 2,
+    ));
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(useMaterial3: true),
+      home: const DeckDetailPage(deckId: 'd1'),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('il gatto'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'il gatto');
+
+    await tester.tap(find.text('Back'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'the cat');
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('il gatto'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'il gatto');
   });
 }

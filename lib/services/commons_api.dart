@@ -1,11 +1,38 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../domain/models.dart';
 import 'languages.dart';
 
 const String _apiUrl = 'https://commons.wikimedia.org/w/api.php';
+const String _commonsContact = 'https://github.com/gsarrco/apprendo';
+
+String _commonsUserAgent = 'apprendo ($_commonsContact)';
+
+/// Wikimedia's User-Agent policy requires a descriptive agent with a way to
+/// contact the operator. Requests without one (e.g. Dart's default
+/// `Dart/x.y (dart:io)`) are answered with `429 Too Many Requests`, which
+/// broke every media download from `upload.wikimedia.org`.
+///
+/// Call [initCommonsUserAgent] at startup so the app version from
+/// `pubspec.yaml` is included; until then a version-less agent is used,
+/// which Wikimedia still accepts.
+String get commonsUserAgent => _commonsUserAgent;
+
+/// Replaces the fallback agent with one carrying the real app version.
+/// Failures keep the fallback instead of breaking media search.
+Future<void> initCommonsUserAgent() async {
+  try {
+    final info = await PackageInfo.fromPlatform();
+    if (info.version.isNotEmpty) {
+      _commonsUserAgent = 'apprendo/${info.version} ($_commonsContact)';
+    }
+  } catch (_) {
+    // Keep the version-less fallback.
+  }
+}
 
 class CommonsMedium {
   final String title;
@@ -90,7 +117,10 @@ Future<List<CommonsMedium>> _searchCommons(
     'format': 'json',
     'origin': '*',
   };
-  final res = await client.get(Uri.parse('$_apiUrl?${Uri(queryParameters: params).query}'));
+  final res = await client.get(
+    Uri.parse('$_apiUrl?${Uri(queryParameters: params).query}'),
+    headers: {'User-Agent': commonsUserAgent},
+  );
   if (res.statusCode != 200) {
     throw Exception('MediaWiki request failed: ${res.statusCode}');
   }
@@ -109,9 +139,14 @@ Future<List<CommonsMedium>> searchCommonsImages(
   String query, {
   int limit = 3,
   http.Client? client,
-}) {
-  return _searchCommons(
-      'filetype:bitmap $query', RegExp(r'^image/'), limit, client ?? http.Client());
+}) async {
+  final c = client ?? http.Client();
+  try {
+    return await _searchCommons(
+        'filetype:bitmap $query', RegExp(r'^image/'), limit, c);
+  } finally {
+    if (client == null) c.close();
+  }
 }
 
 String _normalizeTitle(String title) =>
@@ -141,13 +176,19 @@ Future<List<CommonsMedium>> searchCommonsAudio(
   http.Client? client,
 }) async {
   final c = client ?? http.Client();
-  final cat = kCategoryByCode[language.code]!;
-  final llQuery =
-      'intitle:"$query" filetype:audio intitle:"LL-${language.qid}"';
-  final catQuery = 'intitle:"$query" filetype:audio incategory:"$cat"';
-  final results = await Future.wait([
-    _searchCommons(llQuery, RegExp(r'^audio/'), limit, c).catchError((_) => const <CommonsMedium>[]),
-    _searchCommons(catQuery, RegExp(r'^audio/'), limit, c).catchError((_) => const <CommonsMedium>[]),
-  ]);
-  return _dedupeAudios([...results[0], ...results[1]], limit);
+  try {
+    final cat = kCategoryByCode[language.code]!;
+    final llQuery =
+        'intitle:"$query" filetype:audio intitle:"LL-${language.qid}"';
+    final catQuery = 'intitle:"$query" filetype:audio incategory:"$cat"';
+    final results = await Future.wait([
+      _searchCommons(llQuery, RegExp(r'^audio/'), limit, c)
+          .catchError((_) => const <CommonsMedium>[]),
+      _searchCommons(catQuery, RegExp(r'^audio/'), limit, c)
+          .catchError((_) => const <CommonsMedium>[]),
+    ]);
+    return _dedupeAudios([...results[0], ...results[1]], limit);
+  } finally {
+    if (client == null) c.close();
+  }
 }
