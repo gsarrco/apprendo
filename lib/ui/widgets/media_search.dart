@@ -240,6 +240,9 @@ class _MediaSearchState extends State<MediaSearch> {
                                 : widget.type == AttachmentType.image
                                     ? Image.network(
                                         m.url,
+                                        headers: {
+                                          'User-Agent': commonsUserAgent,
+                                        },
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, _, _) =>
                                             const Icon(Icons.broken_image),

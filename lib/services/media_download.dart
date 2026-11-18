@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'commons_api.dart' show commonsUserAgent;
+
 /// Media file downloaded into memory as raw bytes plus its mime type.
 class DownloadedMedia {
   final Uint8List bytes;
@@ -15,13 +17,20 @@ class DownloadedMedia {
 /// away instead of keeping a remote reference.
 Future<DownloadedMedia> downloadMedia(String url, {http.Client? client}) async {
   final c = client ?? http.Client();
-  final res = await c.get(Uri.parse(url));
-  if (res.statusCode != 200) {
-    throw Exception('Download failed (${res.statusCode})');
+  try {
+    final res = await c.get(
+      Uri.parse(url),
+      headers: {'User-Agent': commonsUserAgent},
+    );
+    if (res.statusCode != 200) {
+      throw Exception('Download failed (${res.statusCode})');
+    }
+    final mime = res.headers['content-type']?.split(';').first.trim() ??
+        'application/octet-stream';
+    return DownloadedMedia(bytes: res.bodyBytes, mimeType: mime);
+  } finally {
+    if (client == null) c.close();
   }
-  final mime = res.headers['content-type']?.split(';').first.trim() ??
-      'application/octet-stream';
-  return DownloadedMedia(bytes: res.bodyBytes, mimeType: mime);
 }
 
 /// Guesses the mime type of an uploaded file from its name.
