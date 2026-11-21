@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -20,6 +21,20 @@ String _commonsUserAgent = 'apprendo ($_commonsContact)';
 /// `pubspec.yaml` is included; until then a version-less agent is used,
 /// which Wikimedia still accepts.
 String get commonsUserAgent => _commonsUserAgent;
+
+http.Client? _testCommonsClient;
+
+@visibleForTesting
+void setCommonsClientForTesting(http.Client? client) {
+  _testCommonsClient = client;
+}
+
+(http.Client, bool) _commonsClient(http.Client? client) {
+  if (client != null) return (client, false);
+  final test = _testCommonsClient;
+  if (test != null) return (test, false);
+  return (http.Client(), true);
+}
 
 /// Replaces the fallback agent with one carrying the real app version.
 /// Failures keep the fallback instead of breaking media search.
@@ -140,12 +155,12 @@ Future<List<CommonsMedium>> searchCommonsImages(
   int limit = 3,
   http.Client? client,
 }) async {
-  final c = client ?? http.Client();
+  final (c, owned) = _commonsClient(client);
   try {
     return await _searchCommons(
         'filetype:bitmap $query', RegExp(r'^image/'), limit, c);
   } finally {
-    if (client == null) c.close();
+    if (owned) c.close();
   }
 }
 
@@ -175,7 +190,7 @@ Future<List<CommonsMedium>> searchCommonsAudio(
   int limit = 3,
   http.Client? client,
 }) async {
-  final c = client ?? http.Client();
+  final (c, owned) = _commonsClient(client);
   try {
     final cat = kCategoryByCode[language.code]!;
     final llQuery =
@@ -189,6 +204,6 @@ Future<List<CommonsMedium>> searchCommonsAudio(
     ]);
     return _dedupeAudios([...results[0], ...results[1]], limit);
   } finally {
-    if (client == null) c.close();
+    if (owned) c.close();
   }
 }

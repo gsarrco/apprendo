@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../domain/models.dart';
@@ -57,7 +59,7 @@ class CardSide {
 }
 
 /// Text / pronunciation / image editor for one card side.
-class CardSideEditor extends StatelessWidget {
+class CardSideEditor extends StatefulWidget {
   final String heading;
   final TextEditingController text;
   final CardSide side;
@@ -74,12 +76,54 @@ class CardSideEditor extends StatelessWidget {
   });
 
   @override
+  State<CardSideEditor> createState() => _CardSideEditorState();
+}
+
+class _CardSideEditorState extends State<CardSideEditor> {
+  static const _typingDebounce = Duration(milliseconds: 600);
+
+  Timer? _typing;
+  String? _mediaQuery;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.text.addListener(_onTextChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant CardSideEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.text != oldWidget.text) {
+      oldWidget.text.removeListener(_onTextChanged);
+      widget.text.addListener(_onTextChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _typing?.cancel();
+    widget.text.removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    _typing?.cancel();
+    _typing = Timer(_typingDebounce, () {
+      if (!mounted) return;
+      final raw = widget.text.text;
+      if (raw == _mediaQuery) return;
+      setState(() => _mediaQuery = raw);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(heading,
+        Text(widget.heading,
             style:
                 theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
@@ -101,35 +145,57 @@ class CardSideEditor extends StatelessWidget {
               icon: Icon(Icons.image_outlined, size: 16),
             ),
           ],
-          selected: {side.tab},
-          onSelectionChanged: (s) => onTabChange(s.first),
+          selected: {widget.side.tab},
+          onSelectionChanged: (s) {
+            FocusManager.instance.primaryFocus?.unfocus();
+            widget.onTabChange(s.first);
+          },
           showSelectedIcon: false,
         ),
         const SizedBox(height: 8),
-        switch (side.tab) {
-          SideTab.text => TextField(
-              controller: text,
-              minLines: 2,
-              maxLines: 5,
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: heading,
+        Stack(
+          alignment: AlignmentDirectional.topStart,
+          fit: StackFit.passthrough,
+          children: [
+            for (final tab in SideTab.values)
+              Offstage(
+                offstage: tab != widget.side.tab,
+                child: _tabBody(tab),
               ),
-            ),
-          SideTab.pronunciation => MediaSearch(
-              type: AttachmentType.audio,
-              defaultLanguage: side.defaultLanguage,
-              selected: side.attachments,
-              onChange: onAttachmentsChange,
-            ),
-          SideTab.image => MediaSearch(
-              type: AttachmentType.image,
-              defaultLanguage: null,
-              selected: side.attachments,
-              onChange: onAttachmentsChange,
-            ),
-        },
+          ],
+        ),
       ],
     );
+  }
+
+  Widget _tabBody(SideTab tab) {
+    switch (tab) {
+      case SideTab.text:
+        return TextField(
+          controller: widget.text,
+          minLines: 2,
+          maxLines: 5,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            hintText: widget.heading,
+          ),
+        );
+      case SideTab.pronunciation:
+        return MediaSearch(
+          type: AttachmentType.audio,
+          defaultLanguage: widget.side.defaultLanguage,
+          selected: widget.side.attachments,
+          onChange: widget.onAttachmentsChange,
+          autoQuery: _mediaQuery,
+        );
+      case SideTab.image:
+        return MediaSearch(
+          type: AttachmentType.image,
+          defaultLanguage: null,
+          selected: widget.side.attachments,
+          onChange: widget.onAttachmentsChange,
+          autoQuery: _mediaQuery,
+        );
+    }
   }
 }

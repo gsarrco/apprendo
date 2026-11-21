@@ -1,12 +1,15 @@
 import 'package:apprendo/app.dart';
 import 'package:apprendo/data/database.dart';
 import 'package:apprendo/domain/models.dart';
+import 'package:apprendo/services/commons_api.dart';
 import 'package:apprendo/services/languages.dart';
 import 'package:apprendo/ui/deck_detail_page.dart';
 import 'package:apprendo/ui/widgets/card_form.dart';
 import 'package:apprendo/ui/widgets/media_search.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
 
 void main() {
@@ -18,6 +21,7 @@ void main() {
   });
 
   tearDown(() async {
+    setCommonsClientForTesting(null);
     await db.close();
   });
 
@@ -177,5 +181,88 @@ void main() {
     await tester.pumpWidget(build(kLanguages[1]));
     await tester.pumpAndSettle();
     expect(find.text('French'), findsOneWidget);
+  });
+
+  testWidgets('typing drafts and runs both media searches automatically',
+      (tester) async {
+    final requests = <http.Request>[];
+    setCommonsClientForTesting(MockClient((req) async {
+      requests.add(req);
+      return http.Response('{}', 200);
+    }));
+    await tester.pumpWidget(wrap(CardForm(
+      deckId: 'd1',
+      frontDefaultLanguage: kLanguages[4],
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Front'), '  il gatto  ');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    String queryOf(String hint) => find
+        .byType(TextField, skipOffstage: false)
+        .evaluate()
+        .map((e) => e.widget as TextField)
+        .singleWhere(
+            (f) => (f.decoration as InputDecoration).hintText == hint)
+        .controller!
+        .text;
+    expect(queryOf('Search image'), 'il gatto');
+    expect(queryOf('Search audio'), 'il gatto');
+    expect(
+      requests.any((r) => r.url.query.contains('filetype%3Abitmap+il+gatto')),
+      isTrue,
+    );
+    expect(
+      requests.where((r) => r.url.query.contains('filetype%3Aaudio')).length,
+      2,
+    );
+  });
+
+  testWidgets(
+      'without a default audio language the query is drafted but not searched',
+      (tester) async {
+    final requests = <http.Request>[];
+    setCommonsClientForTesting(MockClient((req) async {
+      requests.add(req);
+      return http.Response('{}', 200);
+    }));
+    await tester.pumpWidget(wrap(CardForm(deckId: 'd1')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Front'), 'il gatto');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    expect(
+      requests.where((r) => r.url.query.contains('filetype%3Aaudio')),
+      isEmpty,
+    );
+
+    await tester.tap(find.text('Audio'));
+    await tester.pumpAndSettle();
+
+    final audioField = find
+        .byType(TextField, skipOffstage: false)
+        .evaluate()
+        .map((e) => e.widget as TextField)
+        .singleWhere(
+            (f) => (f.decoration as InputDecoration).hintText == 'Search audio');
+    expect(audioField.controller!.text, 'il gatto');
+    expect(audioField.enabled, isFalse);
+
+    await tester.tap(find.text('No language'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Italian'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
+
+    expect(
+      requests.where((r) => r.url.query.contains('filetype%3Aaudio')).length,
+      2,
+    );
   });
 }

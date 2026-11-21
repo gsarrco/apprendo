@@ -17,6 +17,7 @@ import 'attachment_views.dart';
 class MediaSearch extends StatefulWidget {
   final AttachmentType type;
   final Language? defaultLanguage;
+  final String? autoQuery;
   final List<CardAttachment> selected;
   final ValueChanged<List<CardAttachment>> onChange;
 
@@ -24,6 +25,7 @@ class MediaSearch extends StatefulWidget {
     super.key,
     required this.type,
     this.defaultLanguage,
+    this.autoQuery,
     required this.selected,
     required this.onChange,
   });
@@ -38,11 +40,14 @@ class _MediaSearchState extends State<MediaSearch> {
   bool _loading = false;
   List<CommonsMedium> _results = const [];
   final Set<String> _downloading = {};
+  String? _appliedAutoQuery;
+  int _searchSeq = 0;
 
   @override
   void initState() {
     super.initState();
     _language = widget.defaultLanguage;
+    _applyAutoQuery();
   }
 
   @override
@@ -51,6 +56,24 @@ class _MediaSearchState extends State<MediaSearch> {
     if (widget.defaultLanguage != oldWidget.defaultLanguage) {
       _language = widget.defaultLanguage;
     }
+    _applyAutoQuery();
+  }
+
+  void _applyAutoQuery() {
+    final q = _prepareQuery(widget.autoQuery);
+    if (q == null || q == _appliedAutoQuery) return;
+    _appliedAutoQuery = q;
+    _query.text = q;
+    if (widget.type == AttachmentType.image || _language != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _runSearch();
+      });
+    }
+  }
+
+  String? _prepareQuery(String? raw) {
+    final q = raw?.trim();
+    return q == null || q.isEmpty ? null : q;
   }
 
   Future<void> _upload() async {
@@ -84,8 +107,10 @@ class _MediaSearchState extends State<MediaSearch> {
   }
 
   Future<void> _runSearch() async {
-    final q = _query.text.trim();
-    if (q.isEmpty) return;
+    final q = _prepareQuery(_query.text);
+    if (q == null) return;
+    if (widget.type == AttachmentType.audio && _language == null) return;
+    final seq = ++_searchSeq;
     setState(() {
       _loading = true;
       _results = const [];
@@ -93,11 +118,11 @@ class _MediaSearchState extends State<MediaSearch> {
     try {
       final media = widget.type == AttachmentType.image
           ? await searchCommonsImages(q, limit: 10)
-          : _language != null
-              ? await searchCommonsAudio(q, _language!, limit: 10)
-              : const <CommonsMedium>[];
+          : await searchCommonsAudio(q, _language!, limit: 10);
+      if (seq != _searchSeq) return;
       setState(() => _results = media);
     } catch (e) {
+      if (seq != _searchSeq) return;
       setState(() => _results = const []);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -105,7 +130,7 @@ class _MediaSearchState extends State<MediaSearch> {
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (seq == _searchSeq && mounted) setState(() => _loading = false);
     }
   }
 
