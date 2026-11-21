@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -20,6 +21,20 @@ String _commonsUserAgent = 'apprendo ($_commonsContact)';
 /// `pubspec.yaml` is included; until then a version-less agent is used,
 /// which Wikimedia still accepts.
 String get commonsUserAgent => _commonsUserAgent;
+
+http.Client? _testCommonsClient;
+
+@visibleForTesting
+void setCommonsClientForTesting(http.Client? client) {
+  _testCommonsClient = client;
+}
+
+(http.Client, bool) _commonsClient(http.Client? client) {
+  if (client != null) return (client, false);
+  final test = _testCommonsClient;
+  if (test != null) return (test, false);
+  return (http.Client(), true);
+}
 
 /// Replaces the fallback agent with one carrying the real app version.
 /// Failures keep the fallback instead of breaking media search.
@@ -140,22 +155,22 @@ Future<List<CommonsMedium>> searchCommonsImages(
   int limit = 3,
   http.Client? client,
 }) async {
-  final c = client ?? http.Client();
+  final (c, owned) = _commonsClient(client);
   try {
     return await _searchCommons(
         'filetype:bitmap $query', RegExp(r'^image/'), limit, c);
   } finally {
-    if (client == null) c.close();
+    if (owned) c.close();
   }
 }
 
-String _normalizeTitle(String title) =>
+String normalizeCommonsTitle(String title) =>
     title.replaceFirst(RegExp(r'\.[^.]+$'), '').toLowerCase();
 
 List<CommonsMedium> _dedupeAudios(List<CommonsMedium> media, int limit) {
   final byKey = <String, CommonsMedium>{};
   for (final m in media) {
-    final key = _normalizeTitle(m.title);
+    final key = normalizeCommonsTitle(m.title);
     final existing = byKey[key];
     if (existing == null) {
       byKey[key] = m;
@@ -175,20 +190,33 @@ Future<List<CommonsMedium>> searchCommonsAudio(
   int limit = 3,
   http.Client? client,
 }) async {
-  final c = client ?? http.Client();
+  final (c, owned) = _commonsClient(client);
   try {
     final cat = kCategoryByCode[language.code]!;
     final llQuery =
         'intitle:"$query" filetype:audio intitle:"LL-${language.qid}"';
     final catQuery = 'intitle:"$query" filetype:audio incategory:"$cat"';
-    final results = await Future.wait([
-      _searchCommons(llQuery, RegExp(r'^audio/'), limit, c)
-          .catchError((_) => const <CommonsMedium>[]),
-      _searchCommons(catQuery, RegExp(r'^audio/'), limit, c)
-          .catchError((_) => const <CommonsMedium>[]),
+    final attempts = await Future.wait([
+      _attemptSearch(_searchCommons(llQuery, RegExp(r'^audio/'), limit, c)),
+      _attemptSearch(_searchCommons(catQuery, RegExp(r'^audio/'), limit, c)),
     ]);
-    return _dedupeAudios([...results[0], ...results[1]], limit);
+    if (attempts.every((a) => a.$1 == null)) {
+      throw attempts.firstWhere((a) => a.$2 != null).$2!;
+    }
+    return _dedupeAudios([
+      ...?attempts[0].$1,
+      ...?attempts[1].$1,
+    ], limit);
   } finally {
-    if (client == null) c.close();
+    if (owned) c.close();
+  }
+}
+
+Future<(List<CommonsMedium>?, Object?)> _attemptSearch(
+    Future<List<CommonsMedium>> search) async {
+  try {
+    return (await search, null);
+  } catch (e) {
+    return (null, e);
   }
 }

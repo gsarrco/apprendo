@@ -167,6 +167,101 @@ void main() {
     expect((await db.getStudyTag('t1'))!.deckIds, ['d2']);
   });
 
+  test('watchCards streams cards with newly written attachments', () async {
+    await db.insertDeck(Deck(
+        id: 'd1', name: 'D', createdAt: 1));
+    final emissions = <List<CardDoc>>[];
+    final sub = db.watchCards('d1').listen(emissions.add);
+    await db.insertCard(CardDoc(
+      id: 'c1',
+      deckId: 'd1',
+      front: 'f',
+      back: 'b',
+      backAttachments: [
+        CardAttachment(
+          type: AttachmentType.audio,
+          mimeType: 'audio/ogg',
+          content: Uint8List.fromList([1, 2]),
+          caption: 'clip',
+          createdAt: 2,
+        ),
+      ],
+      due: '2026-01-01T00:00:00.000Z',
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+    await untilStreamSettles(
+        () => emissions.isNotEmpty && emissions.last.single.backAttachments.isNotEmpty);
+    sub.cancel();
+    expect(emissions.last.single.backAttachments.single.type,
+        AttachmentType.audio);
+
+    await db.updateCardContent(CardDoc(
+      id: 'c1',
+      deckId: 'd1',
+      front: 'f',
+      back: 'b',
+      backAttachments: const [],
+      due: '2026-01-01T00:00:00.000Z',
+      createdAt: 1,
+      updatedAt: 2,
+    ));
+    final late = <List<CardDoc>>[];
+    final sub2 = db.watchCards('d1').listen(late.add);
+    await untilStreamSettles(
+        () => late.isNotEmpty && late.last.single.backAttachments.isEmpty);
+    sub2.cancel();
+  });
+
+  test('watchDueCards streams due cards with attachments', () async {
+    await db.insertDeck(Deck(
+        id: 'd1', name: 'D', createdAt: 1));
+    final now = DateTime.now();
+    final emissions = <List<CardDoc>>[];
+    final sub = db
+        .watchDueCards(['d1'], nowIso: now.toIso8601String())
+        .listen(emissions.add);
+    await db.insertCard(CardDoc(
+      id: 'c1',
+      deckId: 'd1',
+      front: 'f',
+      back: 'b',
+      backAttachments: [
+        CardAttachment(
+          type: AttachmentType.audio,
+          mimeType: 'audio/ogg',
+          content: Uint8List.fromList([1]),
+          caption: 'clip',
+          createdAt: 2,
+        ),
+      ],
+      due: now.toIso8601String(),
+      createdAt: 1,
+      updatedAt: 1,
+    ));
+    await untilStreamSettles(
+        () => emissions.isNotEmpty && emissions.last.single.backAttachments.isNotEmpty);
+    sub.cancel();
+    expect(emissions.last.single.backAttachments, hasLength(1));
+  });
+
+  test('watchStudyTags streams deck membership changes', () async {
+    await db.insertDeck(Deck(
+        id: 'd1', name: 'D', createdAt: 1));
+    await db.insertDeck(Deck(
+        id: 'd2', name: 'D2', createdAt: 2));
+    await db.insertStudyTag(StudyTag(
+        id: 't1', name: 'Tag', deckIds: const [], createdAt: 3));
+    final emissions = <List<StudyTag>>[];
+    final sub = db.watchStudyTags().listen(emissions.add);
+    await untilStreamSettles(() => emissions.isNotEmpty);
+    await db.setStudyTagDecks('t1', ['d1']);
+    await untilStreamSettles(() =>
+        emissions.isNotEmpty && emissions.last.single.deckIds.contains('d1'));
+    sub.cancel();
+    expect(emissions.last.single.deckIds, ['d1']);
+  });
+
   test('v1 databases migrate attachments to raw bytes', () async {
     final dir = await Directory.systemTemp.createTemp('apprendo-mig');
     addTearDown(() => dir.delete(recursive: true));
@@ -354,6 +449,13 @@ void main() {
       expect(e.message, 'File is not valid JSON');
     }
   });
+}
+
+Future<void> untilStreamSettles(bool Function() done) async {
+  for (var i = 0; i < 500 && !done(); i++) {
+    await Future<void>.delayed(const Duration(milliseconds: 1));
+  }
+  expect(done(), isTrue, reason: 'stream did not settle to the expected state');
 }
 
 void parseEncodeBadJson() {

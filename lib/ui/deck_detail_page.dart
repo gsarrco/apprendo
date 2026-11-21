@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../app.dart';
 import '../domain/models.dart';
 import '../services/audio_service.dart' as audio;
+import '../services/languages.dart';
 import 'study_session_page.dart';
 import 'widgets/attachment_views.dart';
 import 'widgets/card_form.dart';
@@ -72,6 +73,10 @@ class _DeckDetailPageState extends State<DeckDetailPage> {
                   cards.where((c) => c.id == _editingCardId).firstOrNull;
               final latestCard = cards.fold<CardDoc?>(null, (acc, c) =>
                   (acc == null || c.updatedAt > acc.updatedAt) ? c : acc);
+              final frontDefaultLanguage =
+                  lastAudioLanguage(cards.expand((c) => c.frontAttachments));
+              final backDefaultLanguage =
+                  lastAudioLanguage(cards.expand((c) => c.backAttachments));
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -91,6 +96,8 @@ class _DeckDetailPageState extends State<DeckDetailPage> {
                     deckId: widget.deckId,
                     editingCard: editingCard,
                     latestCard: latestCard,
+                    frontDefaultLanguage: frontDefaultLanguage,
+                    backDefaultLanguage: backDefaultLanguage,
                     onDone: () =>
                         setState(() => _editingCardId = null),
                   ),
@@ -183,7 +190,7 @@ class _CardTile extends StatelessWidget {
                       ),
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
                           child: Text(
                             card.front,
                             style: theme.textTheme.titleSmall,
@@ -207,7 +214,7 @@ class _CardTile extends StatelessWidget {
                       ),
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
                           child: Text(
                             card.back,
                             style: theme.textTheme.bodySmall?.copyWith(

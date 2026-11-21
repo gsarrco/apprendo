@@ -17,6 +17,7 @@ import 'attachment_views.dart';
 class MediaSearch extends StatefulWidget {
   final AttachmentType type;
   final Language? defaultLanguage;
+  final String? autoQuery;
   final List<CardAttachment> selected;
   final ValueChanged<List<CardAttachment>> onChange;
 
@@ -24,6 +25,7 @@ class MediaSearch extends StatefulWidget {
     super.key,
     required this.type,
     this.defaultLanguage,
+    this.autoQuery,
     required this.selected,
     required this.onChange,
   });
@@ -38,11 +40,47 @@ class _MediaSearchState extends State<MediaSearch> {
   bool _loading = false;
   List<CommonsMedium> _results = const [];
   final Set<String> _downloading = {};
+  String? _appliedAutoQuery;
+  int _searchSeq = 0;
 
   @override
   void initState() {
     super.initState();
     _language = widget.defaultLanguage;
+    _applyAutoQuery();
+  }
+
+  @override
+  void didUpdateWidget(covariant MediaSearch oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.defaultLanguage != oldWidget.defaultLanguage) {
+      _language = widget.defaultLanguage;
+    }
+    _applyAutoQuery();
+  }
+
+  void _applyAutoQuery() {
+    final parts = _prepareQuery(widget.autoQuery);
+    if (parts == null) return;
+    final q = parts.join(', ');
+    if (q == _appliedAutoQuery) return;
+    _appliedAutoQuery = q;
+    _query.text = q;
+    if (widget.type == AttachmentType.image || _language != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _runSearch(silent: true);
+      });
+    }
+  }
+
+  List<String>? _prepareQuery(String? raw) {
+    if (raw == null) return null;
+    final parts = raw
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? null : parts;
   }
 
   Future<void> _upload() async {
@@ -75,30 +113,46 @@ class _MediaSearchState extends State<MediaSearch> {
     widget.onChange(next);
   }
 
-  Future<void> _runSearch() async {
-    final q = _query.text.trim();
-    if (q.isEmpty) return;
+  Future<void> _runSearch({bool silent = false}) async {
+    final parts = _prepareQuery(_query.text);
+    if (parts == null) return;
+    if (widget.type == AttachmentType.audio && _language == null) return;
+    final seq = ++_searchSeq;
     setState(() {
       _loading = true;
       _results = const [];
     });
     try {
-      final media = widget.type == AttachmentType.image
-          ? await searchCommonsImages(q, limit: 10)
-          : _language != null
-              ? await searchCommonsAudio(q, _language!, limit: 10)
-              : const <CommonsMedium>[];
-      setState(() => _results = media);
+      final groups = await Future.wait(parts.map(_searchMedia));
+      if (seq != _searchSeq) return;
+      final results = ResultList(widget.type, _interleave(groups));
+      setState(() => _results = results.clean().results);
     } catch (e) {
+      if (seq != _searchSeq) return;
       setState(() => _results = const []);
-      if (mounted) {
+      if (mounted && !silent) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not load media: $e')),
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (seq == _searchSeq && mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<List<CommonsMedium>> _searchMedia(String q) =>
+      widget.type == AttachmentType.image
+          ? searchCommonsImages(q, limit: 10)
+          : searchCommonsAudio(q, _language!, limit: 10);
+
+  List<CommonsMedium> _interleave(List<List<CommonsMedium>> groups) {
+    final longest = groups.fold(
+        0, (n, g) => g.length > n ? g.length : n);
+    return [
+      for (var i = 0; i < longest; i++)
+        for (final group in groups)
+          if (i < group.length) group[i],
+    ];
   }
 
   /// Commons picks are downloaded immediately: attachments are always
@@ -278,6 +332,36 @@ class _MediaSearchState extends State<MediaSearch> {
         ),
       ],
     );
+  }
+}
+
+class ResultList {
+  final AttachmentType type;
+  final List<CommonsMedium> results;
+
+  const ResultList(this.type, this.results);
+
+  ResultList clean() {
+    final urls = <String>{};
+    final titles = <String, int>{};
+    final cleaned = <CommonsMedium>[];
+    for (final m in results) {
+      if (!urls.add(m.url)) continue;
+      if (type == AttachmentType.audio) {
+        final key = normalizeCommonsTitle(m.title);
+        final i = titles[key];
+        if (i != null) {
+          if (m.title.contains('LL-Q') &&
+              !cleaned[i].title.contains('LL-Q')) {
+            cleaned[i] = m;
+          }
+          continue;
+        }
+        titles[key] = cleaned.length;
+      }
+      cleaned.add(m);
+    }
+    return ResultList(type, cleaned);
   }
 }
 

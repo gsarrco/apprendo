@@ -168,11 +168,26 @@ class AppDatabase extends _$AppDatabase {
 
   Stream<List<CardDoc>> watchCards(String deckId) {
     return _cardsStreams.putIfAbsent(deckId, () {
-      final query = select(cards)
-        ..where((c) => c.deckId.equals(deckId))
-        ..orderBy([(c) => OrderingTerm.asc(c.createdAt)]);
-      return _LatestStream(query.watch().asyncMap(_attachToRows));
+      return _LatestStream(
+        _watchWithUpdates(
+          () => getCardsOfDecks([deckId]),
+          {cards, cardAttachments},
+        ),
+      );
     });
+  }
+
+  /// Fetches [fetch] immediately, then again whenever any table in
+  /// [tables] changes: mapped-join streams must re-read their secondary
+  /// tables too, or writes to those leave the stream stale.
+  Stream<T> _watchWithUpdates<T>(
+    Future<T> Function() fetch,
+    Set<ResultSetImplementation> tables,
+  ) async* {
+    yield await fetch();
+    await for (final _ in tableUpdates(TableUpdateQuery.onAllTables(tables))) {
+      yield await fetch();
+    }
   }
 
   Stream<List<CardDoc>> watchDueCards(List<String> deckIds, {String? nowIso}) {
@@ -180,15 +195,20 @@ class AppDatabase extends _$AppDatabase {
       return Stream.value(const <CardDoc>[]);
     }
     final now = nowIso ?? DateTime.now().toIso8601String();
-    final query = select(cards)
-      ..where((c) => c.deckId.isIn(deckIds) & c.due.isSmallerOrEqualValue(now))
-      ..orderBy([(c) => OrderingTerm.asc(c.due)]);
-    return query.watch().asyncMap(_attachToRows);
+    Future<List<CardDoc>> fetch() async {
+      final query = select(cards)
+        ..where((c) => c.deckId.isIn(deckIds) & c.due.isSmallerOrEqualValue(now))
+        ..orderBy([(c) => OrderingTerm.asc(c.due)]);
+      return _attachToRows(await query.get());
+    }
+    return _watchWithUpdates(fetch, {cards, cardAttachments});
   }
 
   Future<List<CardDoc>> getCardsOfDecks(List<String> deckIds) async {
     if (deckIds.isEmpty) return const [];
-    final query = select(cards)..where((c) => c.deckId.isIn(deckIds));
+    final query = select(cards)
+      ..where((c) => c.deckId.isIn(deckIds))
+      ..orderBy([(c) => OrderingTerm.asc(c.createdAt)]);
     final rows = await query.get();
     return _attachToRows(rows);
   }
@@ -401,29 +421,9 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<StudyTag>>? _studyTagsStream;
   Stream<List<StudyTag>> watchStudyTags() {
     if (_studyTagsStream != null) return _studyTagsStream!;
-    return _studyTagsStream = _watchStudyTagsUncached().asBroadcastStream();
-  }
-
-  Stream<List<StudyTag>> _watchStudyTagsUncached() async* {
-    final query = select(studyTags)
-      ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]);
-    await for (final rows in query.watch()) {
-      final out = <StudyTag>[];
-      for (final row in rows) {
-        final deckRows = await (select(
-          studyTagDecks,
-        )..where((s) => s.studyTagId.equals(row.id))).get();
-        out.add(
-          StudyTag(
-            id: row.id,
-            name: row.name,
-            deckIds: deckRows.map((d) => d.deckId).toList(),
-            createdAt: row.createdAt,
-          ),
-        );
-      }
-      yield out;
-    }
+    return _studyTagsStream = _LatestStream(
+      _watchWithUpdates(getStudyTagsAll, {studyTags, studyTagDecks}),
+    );
   }
 
   Future<StudyTag?> getStudyTag(String id) async {
