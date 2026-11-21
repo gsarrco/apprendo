@@ -45,6 +45,14 @@ class _MediaSearchState extends State<MediaSearch> {
     _language = widget.defaultLanguage;
   }
 
+  @override
+  void didUpdateWidget(covariant MediaSearch oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.defaultLanguage != oldWidget.defaultLanguage) {
+      _language = widget.defaultLanguage;
+    }
+  }
+
   Future<void> _upload() async {
     final files = await FilePicker.pickFiles(
       type: widget.type == AttachmentType.image

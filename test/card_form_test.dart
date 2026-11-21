@@ -1,8 +1,10 @@
 import 'package:apprendo/app.dart';
 import 'package:apprendo/data/database.dart';
 import 'package:apprendo/domain/models.dart';
+import 'package:apprendo/services/languages.dart';
 import 'package:apprendo/ui/deck_detail_page.dart';
 import 'package:apprendo/ui/widgets/card_form.dart';
+import 'package:apprendo/ui/widgets/media_search.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -115,5 +117,65 @@ void main() {
 
     expect(tester.widget<TextField>(find.byType(TextField)).controller?.text,
         'il gatto');
+  });
+
+  testWidgets('prefills each side with its last-used audio language',
+      (tester) async {
+    await tester.pumpWidget(wrap(CardForm(
+      deckId: 'd1',
+      frontDefaultLanguage: kLanguages[1],
+      backDefaultLanguage: kLanguages[3],
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Audio'));
+    await tester.pumpAndSettle();
+    expect(find.text('French'), findsOneWidget);
+
+    await tester.tap(find.text('Back'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Audio'));
+    await tester.pumpAndSettle();
+    expect(find.text('German'), findsOneWidget);
+  });
+
+  testWidgets('adopts the audio language once the deck cards load',
+      (tester) async {
+    await tester.pumpWidget(wrap(CardForm(deckId: 'd1')));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(wrap(CardForm(
+      deckId: 'd1',
+      frontDefaultLanguage: kLanguages[1],
+      backDefaultLanguage: kLanguages[3],
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Audio'));
+    await tester.pumpAndSettle();
+    expect(find.text('French'), findsOneWidget);
+
+    await tester.tap(find.text('Back'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Audio'));
+    await tester.pumpAndSettle();
+    expect(find.text('German'), findsOneWidget);
+  });
+
+  testWidgets('audio language dropdown follows a new default language',
+      (tester) async {
+    Widget build(Language? language) => wrap(MediaSearch(
+          type: AttachmentType.audio,
+          defaultLanguage: language,
+          selected: const [],
+          onChange: (_) {},
+        ));
+
+    await tester.pumpWidget(build(null));
+    expect(find.text('No language'), findsOneWidget);
+
+    await tester.pumpWidget(build(kLanguages[1]));
+    await tester.pumpAndSettle();
+    expect(find.text('French'), findsOneWidget);
   });
 }

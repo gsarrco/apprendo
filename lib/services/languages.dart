@@ -22,3 +22,13 @@ final Map<String, Language> kLanguageByQid = {
 final Map<String, String> kCategoryByCode = {
   for (final l in kLanguages) l.code: '${l.label} pronunciation',
 };
+
+/// Language of the most recently added audio attachment that has one.
+Language? lastAudioLanguage(Iterable<CardAttachment> attachments) {
+  CardAttachment? latest;
+  for (final a in attachments) {
+    if (a.type != AttachmentType.audio || a.languageQid == null) continue;
+    if (latest == null || a.createdAt >= latest.createdAt) latest = a;
+  }
+  return latest == null ? null : kLanguageByQid[latest.languageQid!];
+}

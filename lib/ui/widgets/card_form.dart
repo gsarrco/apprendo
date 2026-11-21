@@ -21,6 +21,8 @@ class CardForm extends StatefulWidget {
   final String deckId;
   final CardDoc? editingCard;
   final CardDoc? latestCard;
+  final Language? frontDefaultLanguage;
+  final Language? backDefaultLanguage;
   final VoidCallback? onDone;
 
   const CardForm({
@@ -28,6 +30,8 @@ class CardForm extends StatefulWidget {
     required this.deckId,
     this.editingCard,
     this.latestCard,
+    this.frontDefaultLanguage,
+    this.backDefaultLanguage,
     this.onDone,
   });
 
@@ -55,15 +59,19 @@ class _CardFormState extends State<CardForm> {
     _front = TextEditingController(text: widget.editingCard?.front ?? '');
     _back = TextEditingController(text: widget.editingCard?.back ?? '');
     final template = widget.editingCard ?? widget.latestCard;
-    if (widget.editingCard != null) {
-      _frontAttachments = widget.editingCard!.frontAttachments;
-      _backAttachments = widget.editingCard!.backAttachments;
+    final editing = widget.editingCard;
+    if (editing != null) {
+      _frontAttachments = editing.frontAttachments;
+      _backAttachments = editing.backAttachments;
+      _frontDefaultLanguage = lastAudioLanguage(editing.frontAttachments);
+      _backDefaultLanguage = lastAudioLanguage(editing.backAttachments);
+    } else {
+      _frontDefaultLanguage = widget.frontDefaultLanguage;
+      _backDefaultLanguage = widget.backDefaultLanguage;
     }
     if (template != null) {
       _frontDefaultTab = _defaultTab(template.frontAttachments);
       _backDefaultTab = _defaultTab(template.backAttachments);
-      _frontDefaultLanguage = _audioLanguage(template.frontAttachments);
-      _backDefaultLanguage = _audioLanguage(template.backAttachments);
     }
   }
 
@@ -74,6 +82,18 @@ class _CardFormState extends State<CardForm> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant CardForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.editingCard != null) return;
+    if (widget.frontDefaultLanguage != oldWidget.frontDefaultLanguage) {
+      _frontDefaultLanguage = widget.frontDefaultLanguage;
+    }
+    if (widget.backDefaultLanguage != oldWidget.backDefaultLanguage) {
+      _backDefaultLanguage = widget.backDefaultLanguage;
+    }
+  }
+
   static _SideTab _defaultTab(List<CardAttachment> a) {
     if (a.any((x) => x.type == AttachmentType.image)) return _SideTab.image;
     if (a.any((x) => x.type == AttachmentType.audio)) {
@@ -82,12 +102,18 @@ class _CardFormState extends State<CardForm> {
     return _SideTab.text;
   }
 
-  static Language? _audioLanguage(List<CardAttachment> a) {
-    final qid = a
-        .where((x) => x.type == AttachmentType.audio)
-        .map((x) => x.languageQid)
-        .firstWhere((q) => q != null, orElse: () => null);
-    return qid == null ? null : kLanguageByQid[qid];
+  void _changeFrontAttachments(List<CardAttachment> v) {
+    setState(() {
+      _frontAttachments = v;
+      _frontDefaultLanguage = lastAudioLanguage(v) ?? _frontDefaultLanguage;
+    });
+  }
+
+  void _changeBackAttachments(List<CardAttachment> v) {
+    setState(() {
+      _backAttachments = v;
+      _backDefaultLanguage = lastAudioLanguage(v) ?? _backDefaultLanguage;
+    });
   }
 
   Future<void> _submit() async {
@@ -244,7 +270,7 @@ class _CardFormState extends State<CardForm> {
             heading: 'Front',
             text: _front,
             attachments: _frontAttachments,
-            onAttachmentsChange: (v) => setState(() => _frontAttachments = v),
+            onAttachmentsChange: _changeFrontAttachments,
             defaultTab: _frontDefaultTab,
             defaultLanguage: _frontDefaultLanguage,
           ),
@@ -273,7 +299,7 @@ class _CardFormState extends State<CardForm> {
             heading: 'Back',
             text: _back,
             attachments: _backAttachments,
-            onAttachmentsChange: (v) => setState(() => _backAttachments = v),
+            onAttachmentsChange: _changeBackAttachments,
             defaultTab: _backDefaultTab,
             defaultLanguage: _backDefaultLanguage,
           ),
