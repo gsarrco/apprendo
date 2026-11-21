@@ -39,8 +39,8 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            if (keystorePropertiesFile.exists()) {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
                 storeFile = file(keystoreProperties["storeFile"] as String)
@@ -56,12 +56,16 @@ android {
         }
         release {
             applicationIdSuffix = ".android"
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
             } else {
-                throw GradleException(
-                    "android/key.properties is missing: release builds need the production keystore"
-                )
+                gradle.taskGraph.whenReady {
+                    if (allTasks.any { it.name.contains("Release") }) {
+                        throw GradleException(
+                            "android/key.properties is missing: release builds need the production keystore"
+                        )
+                    }
+                }
             }
         }
     }
