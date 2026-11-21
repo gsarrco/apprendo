@@ -183,7 +183,7 @@ class _CardTile extends StatelessWidget {
                       ),
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
                           child: Text(
                             card.front,
                             style: theme.textTheme.titleSmall,
@@ -207,7 +207,7 @@ class _CardTile extends StatelessWidget {
                       ),
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
                           child: Text(
                             card.back,
                             style: theme.textTheme.bodySmall?.copyWith(

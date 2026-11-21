@@ -269,7 +269,7 @@ class _StudySessionPageState extends State<StudySessionPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
+                Flexible(
                   child: Text(
                     card.front,
                     style: theme.textTheme.titleMedium
@@ -295,7 +295,7 @@ class _StudySessionPageState extends State<StudySessionPage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
+                  Flexible(
                     child: Text(
                       card.back,
                       style: theme.textTheme.bodyLarge?.copyWith(
