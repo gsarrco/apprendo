@@ -164,13 +164,13 @@ Future<List<CommonsMedium>> searchCommonsImages(
   }
 }
 
-String _normalizeTitle(String title) =>
+String normalizeCommonsTitle(String title) =>
     title.replaceFirst(RegExp(r'\.[^.]+$'), '').toLowerCase();
 
 List<CommonsMedium> _dedupeAudios(List<CommonsMedium> media, int limit) {
   final byKey = <String, CommonsMedium>{};
   for (final m in media) {
-    final key = _normalizeTitle(m.title);
+    final key = normalizeCommonsTitle(m.title);
     final existing = byKey[key];
     if (existing == null) {
       byKey[key] = m;

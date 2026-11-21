@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:apprendo/app.dart';
 import 'package:apprendo/data/database.dart';
 import 'package:apprendo/domain/models.dart';
@@ -201,16 +203,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
 
-    String queryOf(String hint) => find
-        .byType(TextField, skipOffstage: false)
-        .evaluate()
-        .map((e) => e.widget as TextField)
-        .singleWhere(
-            (f) => (f.decoration as InputDecoration).hintText == hint)
-        .controller!
-        .text;
-    expect(queryOf('Search image'), 'il gatto');
-    expect(queryOf('Search audio'), 'il gatto');
+    expect(mediaQueryOf(tester, 'Search image'), 'il gatto');
+    expect(mediaQueryOf(tester, 'Search audio'), 'il gatto');
     expect(
       requests.any((r) => r.url.query.contains('filetype%3Abitmap+il+gatto')),
       isTrue,
@@ -265,4 +259,115 @@ void main() {
       2,
     );
   });
+
+  testWidgets('comma queries fan out to alternating per-part results',
+      (tester) async {
+    http.Response respond(List<String> titles, String mime) => http.Response(
+          jsonEncode({
+            'query': {
+              'pages': {
+                for (final (i, t) in titles.indexed)
+                  '$i': {
+                    'title': 'File:$t',
+                    'imageinfo': [
+                      {'url': 'https://example.com/$t', 'mime': mime},
+                    ],
+                  },
+              },
+            },
+          }),
+          200,
+        );
+    final requests = <http.Request>[];
+    setCommonsClientForTesting(MockClient((req) async {
+      requests.add(req);
+      final q = req.url.query;
+      final image = q.contains('filetype%3Abitmap');
+      for (final part in const ['gatto', 'cane']) {
+        final marker = image ? 'bitmap+$part' : '%22$part%22';
+        if (!q.contains(marker)) continue;
+        final mime = image ? 'image/jpeg' : 'audio/ogg';
+        if (image) {
+          return respond(
+              part == 'gatto'
+                  ? const ['img gatto 1.jpg', 'img cane 1.jpg']
+                  : const ['img cane 1.jpg', 'img cane 2.jpg'],
+              mime);
+        }
+        return respond(
+            part == 'gatto'
+                ? const ['aud gatto 1.jpg', 'aud cane 1.jpg']
+                : const ['aud cane 1.jpg', 'aud cane 2.jpg'],
+            mime);
+      }
+      return respond(const [], 'image/jpeg');
+    }));
+    await tester.pumpWidget(wrap(CardForm(
+      deckId: 'd1',
+      frontDefaultLanguage: kLanguages[4],
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Front'), ' gatto ,  cane ');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    expect(mediaQueryOf(tester, 'Search image'), 'gatto, cane');
+    expect(mediaQueryOf(tester, 'Search audio'), 'gatto, cane');
+    expect(
+      requests.any((r) => r.url.query.contains('filetype%3Abitmap+gatto')),
+      isTrue,
+    );
+    expect(
+      requests.any((r) => r.url.query.contains('filetype%3Abitmap+cane')),
+      isTrue,
+    );
+    expect(
+      requests.where((r) => r.url.query.contains('filetype%3Aaudio')).length,
+      4,
+    );
+
+    await tester.tap(find.text('Audio'));
+    await tester.pumpAndSettle();
+
+    final captions = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((t) => t.data)
+        .whereType<String>()
+        .where((s) => s.startsWith('aud '))
+        .toList();
+    expect(captions, [
+      'aud gatto 1',
+      'aud cane 1',
+      'aud cane 2',
+    ]);
+  });
+
+  test('audio results dedupe by url and normalized title', () {
+    final cleaned = ResultList(AttachmentType.audio, [
+      CommonsMedium(title: 'File:cane.ogg', url: 'u1'),
+      CommonsMedium(title: 'File:Cane.ogg', url: 'u2'),
+      CommonsMedium(title: 'File:dog.oga', url: 'u3'),
+      CommonsMedium(title: 'File:cane.ogg', url: 'u1'),
+    ]).clean().results;
+    expect(cleaned.map((m) => m.url), ['u1', 'u3']);
+  });
+
+  test('image results dedupe by url only', () {
+    final cleaned = ResultList(AttachmentType.image, [
+      CommonsMedium(title: 'File:cat.jpg', url: 'u1'),
+      CommonsMedium(title: 'File:cat.png', url: 'u2'),
+      CommonsMedium(title: 'File:cat.jpg', url: 'u1'),
+    ]).clean().results;
+    expect(cleaned.map((m) => m.url), ['u1', 'u2']);
+  });
 }
+
+String mediaQueryOf(WidgetTester tester, String hint) => find
+    .byType(TextField, skipOffstage: false)
+    .evaluate()
+    .map((e) => e.widget as TextField)
+    .singleWhere((f) => (f.decoration as InputDecoration).hintText == hint)
+    .controller!
+    .text;

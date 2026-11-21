@@ -60,8 +60,10 @@ class _MediaSearchState extends State<MediaSearch> {
   }
 
   void _applyAutoQuery() {
-    final q = _prepareQuery(widget.autoQuery);
-    if (q == null || q == _appliedAutoQuery) return;
+    final parts = _prepareQuery(widget.autoQuery);
+    if (parts == null) return;
+    final q = parts.join(', ');
+    if (q == _appliedAutoQuery) return;
     _appliedAutoQuery = q;
     _query.text = q;
     if (widget.type == AttachmentType.image || _language != null) {
@@ -71,9 +73,14 @@ class _MediaSearchState extends State<MediaSearch> {
     }
   }
 
-  String? _prepareQuery(String? raw) {
-    final q = raw?.trim();
-    return q == null || q.isEmpty ? null : q;
+  List<String>? _prepareQuery(String? raw) {
+    if (raw == null) return null;
+    final parts = raw
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? null : parts;
   }
 
   Future<void> _upload() async {
@@ -107,8 +114,8 @@ class _MediaSearchState extends State<MediaSearch> {
   }
 
   Future<void> _runSearch() async {
-    final q = _prepareQuery(_query.text);
-    if (q == null) return;
+    final parts = _prepareQuery(_query.text);
+    if (parts == null) return;
     if (widget.type == AttachmentType.audio && _language == null) return;
     final seq = ++_searchSeq;
     setState(() {
@@ -116,11 +123,10 @@ class _MediaSearchState extends State<MediaSearch> {
       _results = const [];
     });
     try {
-      final media = widget.type == AttachmentType.image
-          ? await searchCommonsImages(q, limit: 10)
-          : await searchCommonsAudio(q, _language!, limit: 10);
+      final groups = await Future.wait(parts.map(_searchMedia));
       if (seq != _searchSeq) return;
-      setState(() => _results = media);
+      final results = ResultList(widget.type, _interleave(groups));
+      setState(() => _results = results.clean().results);
     } catch (e) {
       if (seq != _searchSeq) return;
       setState(() => _results = const []);
@@ -132,6 +138,21 @@ class _MediaSearchState extends State<MediaSearch> {
     } finally {
       if (seq == _searchSeq && mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<List<CommonsMedium>> _searchMedia(String q) =>
+      widget.type == AttachmentType.image
+          ? searchCommonsImages(q, limit: 10)
+          : searchCommonsAudio(q, _language!, limit: 10);
+
+  List<CommonsMedium> _interleave(List<List<CommonsMedium>> groups) {
+    final longest = groups.fold(
+        0, (n, g) => g.length > n ? g.length : n);
+    return [
+      for (var i = 0; i < longest; i++)
+        for (final group in groups)
+          if (i < group.length) group[i],
+    ];
   }
 
   /// Commons picks are downloaded immediately: attachments are always
@@ -311,6 +332,36 @@ class _MediaSearchState extends State<MediaSearch> {
         ),
       ],
     );
+  }
+}
+
+class ResultList {
+  final AttachmentType type;
+  final List<CommonsMedium> results;
+
+  const ResultList(this.type, this.results);
+
+  ResultList clean() {
+    final urls = <String>{};
+    final titles = <String, int>{};
+    final cleaned = <CommonsMedium>[];
+    for (final m in results) {
+      if (!urls.add(m.url)) continue;
+      if (type == AttachmentType.audio) {
+        final key = normalizeCommonsTitle(m.title);
+        final i = titles[key];
+        if (i != null) {
+          if (m.title.contains('LL-Q') &&
+              !cleaned[i].title.contains('LL-Q')) {
+            cleaned[i] = m;
+          }
+          continue;
+        }
+        titles[key] = cleaned.length;
+      }
+      cleaned.add(m);
+    }
+    return ResultList(type, cleaned);
   }
 }
 
