@@ -196,14 +196,27 @@ Future<List<CommonsMedium>> searchCommonsAudio(
     final llQuery =
         'intitle:"$query" filetype:audio intitle:"LL-${language.qid}"';
     final catQuery = 'intitle:"$query" filetype:audio incategory:"$cat"';
-    final results = await Future.wait([
-      _searchCommons(llQuery, RegExp(r'^audio/'), limit, c)
-          .catchError((_) => const <CommonsMedium>[]),
-      _searchCommons(catQuery, RegExp(r'^audio/'), limit, c)
-          .catchError((_) => const <CommonsMedium>[]),
+    final attempts = await Future.wait([
+      _attemptSearch(_searchCommons(llQuery, RegExp(r'^audio/'), limit, c)),
+      _attemptSearch(_searchCommons(catQuery, RegExp(r'^audio/'), limit, c)),
     ]);
-    return _dedupeAudios([...results[0], ...results[1]], limit);
+    if (attempts.every((a) => a.$1 == null)) {
+      throw attempts.firstWhere((a) => a.$2 != null).$2!;
+    }
+    return _dedupeAudios([
+      ...?attempts[0].$1,
+      ...?attempts[1].$1,
+    ], limit);
   } finally {
     if (owned) c.close();
+  }
+}
+
+Future<(List<CommonsMedium>?, Object?)> _attemptSearch(
+    Future<List<CommonsMedium>> search) async {
+  try {
+    return (await search, null);
+  } catch (e) {
+    return (null, e);
   }
 }

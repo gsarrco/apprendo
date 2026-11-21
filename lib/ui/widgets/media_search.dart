@@ -68,7 +68,7 @@ class _MediaSearchState extends State<MediaSearch> {
     _query.text = q;
     if (widget.type == AttachmentType.image || _language != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _runSearch();
+        if (mounted) _runSearch(silent: true);
       });
     }
   }
@@ -113,7 +113,7 @@ class _MediaSearchState extends State<MediaSearch> {
     widget.onChange(next);
   }
 
-  Future<void> _runSearch() async {
+  Future<void> _runSearch({bool silent = false}) async {
     final parts = _prepareQuery(_query.text);
     if (parts == null) return;
     if (widget.type == AttachmentType.audio && _language == null) return;
@@ -130,7 +130,7 @@ class _MediaSearchState extends State<MediaSearch> {
     } catch (e) {
       if (seq != _searchSeq) return;
       setState(() => _results = const []);
-      if (mounted) {
+      if (mounted && !silent) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not load media: $e')),
         );

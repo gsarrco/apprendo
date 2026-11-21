@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:apprendo/app.dart';
 import 'package:apprendo/data/database.dart';
@@ -8,7 +9,9 @@ import 'package:apprendo/services/languages.dart';
 import 'package:apprendo/ui/deck_detail_page.dart';
 import 'package:apprendo/ui/widgets/card_form.dart';
 import 'package:apprendo/ui/widgets/media_search.dart';
+import 'package:cross_file/cross_file.dart';
 import 'package:drift/native.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -362,6 +365,104 @@ void main() {
     ]).clean().results;
     expect(cleaned.map((m) => m.url), ['u1', 'u2']);
   });
+
+  testWidgets('offline auto searches fail silently', (tester) async {
+    setCommonsClientForTesting(
+        MockClient((_) async => throw Exception('offline')));
+    await tester.pumpWidget(wrap(CardForm(
+      deckId: 'd1',
+      frontDefaultLanguage: kLanguages[4],
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Front'), 'il gatto');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsNothing);
+    expect(mediaQueryOf(tester, 'Search image'), 'il gatto');
+    expect(mediaQueryOf(tester, 'Search audio'), 'il gatto');
+  });
+
+  testWidgets('offline manual search shows the alert', (tester) async {
+    setCommonsClientForTesting(
+        MockClient((_) async => throw Exception('offline')));
+    await tester.pumpWidget(wrap(CardForm(deckId: 'd1')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Front'), 'il gatto');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsNothing);
+
+    await tester.tap(find.text('Image'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('offline manual audio search shows the alert',
+      (tester) async {
+    setCommonsClientForTesting(
+        MockClient((_) async => throw Exception('offline')));
+    await tester.pumpWidget(wrap(CardForm(deckId: 'd1')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Front'), 'il gatto');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Audio'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('No language'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Italian'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('offline typing and manual uploads work without alerts',
+      (tester) async {
+    final originalPicker = FilePickerPlatform.instance;
+    addTearDown(() => FilePickerPlatform.instance = originalPicker);
+    FilePickerPlatform.instance = _FakePicker(
+      _FakeFile('my-cat.png', Uint8List.fromList([1, 2, 3])),
+      _FakeFile('my-beep.mp3', Uint8List.fromList([4, 5, 6])),
+    );
+    setCommonsClientForTesting(
+        MockClient((_) async => throw Exception('offline')));
+    await tester.pumpWidget(wrap(CardForm(deckId: 'd1')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Front'), 'offline ok');
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsNothing);
+
+    await tester.tap(find.text('Image'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload your own image'));
+    await tester.pumpAndSettle();
+    expect(find.text('my-cat'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+
+    await tester.tap(find.text('Audio'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Upload your own audio'));
+    await tester.pumpAndSettle();
+    expect(find.text('my-beep'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+  });
 }
 
 String mediaQueryOf(WidgetTester tester, String hint) => find
@@ -371,3 +472,54 @@ String mediaQueryOf(WidgetTester tester, String hint) => find
     .singleWhere((f) => (f.decoration as InputDecoration).hintText == hint)
     .controller!
     .text;
+
+class _FakePicker extends FilePickerPlatform {
+  final PlatformFile image;
+  final PlatformFile audio;
+
+  _FakePicker(this.image, this.audio);
+
+  @override
+  Future<List<PlatformFile>> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    int compressionQuality = 0,
+    AndroidOptions androidOptions = const AndroidOptions(),
+    DarwinOptions darwinOptions = const DarwinOptions(),
+    WindowsOptions windowsOptions = const WindowsOptions(),
+    LinuxOptions linuxOptions = const LinuxOptions(),
+    WebOptions webOptions = const WebOptions(),
+  }) async =>
+      [type == FileType.image ? image : audio];
+}
+
+base class _FakeFile extends PlatformFile {
+  final String fileName;
+  final Uint8List bytes;
+
+  _FakeFile(this.fileName, this.bytes);
+
+  @override
+  String get name => fileName;
+
+  @override
+  Uri get uri => Uri.file('/tmp/opencode/$fileName');
+
+  @override
+  XFile get xFile => XFile.fromData(bytes, name: fileName);
+
+  @override
+  int? lengthSync() => bytes.length;
+
+  @override
+  Future<int?> length() async => bytes.length;
+
+  @override
+  Future<Uint8List> readAsBytes() async => bytes;
+
+  @override
+  Stream<Uint8List> readAsByteStream() => Stream.value(bytes);
+}
